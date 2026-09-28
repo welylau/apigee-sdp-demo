@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- continueOnError=true: failures are detected by JS-SDP-Apply-Inbound, which fails closed (502). -->
+<ServiceCallout continueOnError="true" enabled="true" name="SC-SDP-Deidentify-Inbound">
+    <DisplayName>SDP Deidentify Inbound (per-part table)</DisplayName>
+    <Request clearPayload="true" variable="sdpDeidentifyInboundRequest">
+        <IgnoreUnresolvedVariables>false</IgnoreUnresolvedVariables>
+        <Set>
+            <Verb>POST</Verb>
+            <Headers>
+                <Header name="Content-Type">application/json</Header>
+                <Header name="X-Goog-User-Project">{propertyset.sdp.dlp_project}</Header>
+            </Headers>
+            <Payload contentType="application/json" variablePrefix="@" variableSuffix="#">@sdp.inbound.deidentify.payload#</Payload>
+        </Set>
+    </Request>
+    <Response>sdpDeidentifyInboundResponse</Response>
+    <HTTPTargetConnection>
+        <Authentication>
+            <GoogleAccessToken>
+                <Scopes>
+                    <Scope>https://www.googleapis.com/auth/cloud-platform</Scope>
+                </Scopes>
+            </GoogleAccessToken>
+        </Authentication>
+        <Properties>
+            <Property name="connect.timeout.millis">10000</Property>
+            <Property name="io.timeout.millis">30000</Property>
+        </Properties>
+        <URL>https://dlp.googleapis.com/v2/projects/{propertyset.sdp.dlp_project}/locations/{propertyset.sdp.dlp_location}/content:deidentify</URL>
+    </HTTPTargetConnection>
+</ServiceCallout>

@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apigee X — Sensitive Data Protection &amp; AI Gateway Governance</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
+    
+    <!-- Fonts: Plus Jakarta Sans & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="demo-v2.css">
+</head>
+<body>
+    <div class="app-container">
+        
+        <!-- TOP HEADER: Google Cloud & Apigee X Brand Bar -->
+        <header class="app-header">
+            <div class="brand-section">
+                <!-- Google Cloud Platform + Apigee X Logos -->
+                <div class="cloud-logos-wrapper">
+                    <!-- Google Cloud Logo -->
+                    <div class="logo-item" title="Google Cloud Platform">
+                        <img src="assets/google-cloud.png" alt="Google Cloud" class="gcp-logo-img">
+                        <span class="gcp-name">Google Cloud</span>
+                    </div>
+
+                    <div class="brand-divider"></div>
+
+                    <!-- Apigee API Management Platform SVG Logo -->
+                    <div class="logo-item apigee-brand" title="Apigee API Management Platform">
+                        <svg class="apigee-svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 81 82" width="24" height="24" fill="#fff" fill-rule="evenodd" stroke="#000" stroke-linecap="round" stroke-linejoin="round">
+                            <use xlink:href="#ApigeeLogoMark" x=".5" y=".5"/>
+                            <symbol id="ApigeeLogoMark" overflow="visible">
+                                <g stroke="none">
+                                    <path d="M13.042 40l5.233-5.233-7.096-7.096c-3.281-3.341-4.244-8.32-2.446-12.644s6.009-7.15 10.692-7.178c3.08-.001 6.033 1.226 8.206 3.409l7.136 7.096L40 13.042l-7.096-7.096A19.07 19.07 0 0 0 14.296.608 19.07 19.07 0 0 0 .608 14.296a19.07 19.07 0 0 0 5.338 18.608zm53.916 0l-5.233 5.233 7.096 7.136a11.66 11.66 0 0 1-16.492 16.452l-7.096-7.096L40 66.958l7.096 7.096a19.07 19.07 0 1 0 26.958-26.958z" fill="#669df6"/>
+                                    <path d="M27.671 68.821c-4.554 4.554-11.938 4.554-16.492 0s-4.554-11.938 0-16.492l7.096-7.096 16.492 16.492zm24.698-57.642c3.327-3.321 8.328-4.31 12.668-2.504s7.164 6.049 7.154 10.75c-.023 3.087-1.246 6.044-3.409 8.246l-7.096 7.096-16.452-16.492zM40 52.646A12.69 12.69 0 0 1 27.354 40h0A12.73 12.73 0 0 1 40 27.354h0A12.73 12.73 0 0 1 52.646 40h0A12.69 12.69 0 0 1 40 52.646zM66.958 40l7.096-7.096A19.07 19.07 0 0 0 65.704.608a19.07 19.07 0 0 0-18.608 5.338L40 13.042 13.042 40l-7.096 7.096A19.07 19.07 0 0 0 .608 65.704a19.07 19.07 0 0 0 32.296 8.35L40 66.958z" fill="#4285f4"/>
+                                </g>
+                            </symbol>
+                        </svg>
+                        <span class="apigee-name">Apigee <strong class="x-accent">X</strong></span>
+                    </div>
+                </div>
+
+                <div class="brand-divider"></div>
+
+                <div class="brand-title-area">
+                    <div class="brand-title">
+                        <span>Sensitive Data Protection (Cloud DLP)</span>
+                    </div>
+                    <span class="brand-subtitle" id="brandSubtitle">Gemini 3.5 Flash-Lite • Bidirectional Inbound &amp; Outbound PII Governance</span>
+                </div>
+            </div>
+
+            <!-- Architecture Badges & Environment -->
+            <div class="arch-tags">
+                <div class="arch-pill" title="Cloud Logging Log Destination">
+                    <span class="pill-dot blue-dot"></span>
+                    <span class="pill-label">Cloud Logging:</span>
+                    <span class="pill-value" id="headerLogId">apigee-sdp-logs</span>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <!-- Guided demo mode -->
+                <button class="present-btn" id="btnPresent" title="Guided demo: step through the story (← → navigate, Enter runs, Esc exits)">
+                    <span>▶</span>
+                    <span>Present</span>
+                </button>
+
+                <!-- Admin Analytics Button -->
+                <button class="admin-nav-btn" id="btnScrollToAdmin" title="Open Cloud Logging Audit Trail &amp; Analytics">
+                    <span>📊</span>
+                    <span>Security Audit &amp; Logs</span>
+                </button>
+
+                <!-- Theme Toggle -->
+                <button class="theme-toggle" id="themeToggleBtn" title="Toggle Light/Dark Theme">
+                    <svg class="theme-icon sun-icon" id="themeIconSun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    <svg class="theme-icon moon-icon" id="themeIconMoon" style="display:none;" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- WORKSPACE LAYOUT: Left (Controls & Input) + Resizable Splitter + Right (Live Execution Inspector) -->
+        <main class="workspace-layout">
+            
+            <!-- LEFT CONTROL PANEL -->
+            <section class="left-panel" id="leftPanel">
+
+                <!-- Demo Notice Panel -->
+                <div class="disclaimer-panel" id="disclaimerPanel">
+                    <span class="disclaimer-icon">⚠️</span>
+                    <div class="disclaimer-content">
+                        <p><strong>Demo notice:</strong> all identities, cards, accounts and keys in this demo are fictitious test data.</p>
+                    </div>
+                    <button class="disclaimer-close-btn" id="disclaimerCloseBtn" title="Dismiss notice">×</button>
+                </div>
+
+                <!-- Inspection Policies Card -->
+                <div class="panel-section">
+                    <div class="section-header">
+                        <div class="header-icon-title">
+                            <span class="icon">🛡️</span>
+                            <h3>Inspection Policies</h3>
+                        </div>
+                        <span class="policy-mode-badge" id="policyModeBadge">FULL DUPLEX</span>
+                    </div>
+
+                    <div class="guardrails-list">
+                        <!-- Inbound Policy -->
+                        <label class="guardrail-item" for="toggleInboundPolicy" title="De-identify every prompt part (system instruction + all turns) before it reaches Gemini">
+                            <span class="guardrail-badge badge-inbound">INBOUND</span>
+                            <div class="guardrail-toggle-wrap">
+                                <input type="checkbox" id="toggleInboundPolicy" checked>
+                                <span class="custom-switch" id="switchInbound"></span>
+                            </div>
+                        </label>
+
+                        <!-- Outbound Policy -->
+                        <label class="guardrail-item" for="toggleOutboundPolicy" title="De-identify the model response before it reaches the client">
+                            <span class="guardrail-badge badge-outbound">OUTBOUND</span>
+                            <div class="guardrail-toggle-wrap">
+                                <input type="checkbox" id="toggleOutboundPolicy" checked>
+                                <span class="custom-switch" id="switchOutbound"></span>
+                            </div>
+                        </label>
+                    </div>
+                    <p class="policy-hint">🔐 Switching SDP off is only honoured for apps with <code>sdp_bypass_allowed=true</code>. Any other app gets <strong>HTTP 403</strong>.</p>
+                </div>
+
+                <!-- Test Prompt Presets -->
+                <div class="panel-section">
+                    <div class="section-header">
+                        <div class="header-icon-title">
+                            <span class="section-icon">⚡</span>
+                            <h3>Test Prompt Library</h3>
+                        </div>
+                        <span class="preset-hint">Click to load • ⌘/Ctrl+Enter to run</span>
+                    </div>
+
+                    <!-- Group: Baseline -->
+                    <div class="preset-group">
+                        <div class="preset-group-title benign-title">
+                            <span class="group-dot dot-green"></span>
+                            <span>Baseline (no sensitive data)</span>
+                            <span class="group-subtag">Zero false positives</span>
+                        </div>
+                        <div class="preset-pills-container">
+                            <button class="preset-pill success" data-id="clean-api"
+                                    data-prompt="Summarise the benefits of an API gateway for AI applications in 3 short bullets."
+                                    data-expect=""
+                                    data-scenario="Baseline: clean prompt"
+                                    data-desc="No sensitive data. Proves zero false positives and shows how little latency SDP adds around the model call.">
+                                <span class="pill-icon">🟢</span>
+                                <span class="pill-text">AI Gateway Benefits</span>
+                            </button>
+                            <button class="preset-pill success" data-id="clean-tour"
+                                    data-prompt="What are the top 3 tourist attractions in Singapore? Answer briefly."
+                                    data-expect=""
+                                    data-scenario="Baseline: place names are not PII"
+                                    data-desc="Landmarks and street names in the model answer must pass through untouched.">
+                                <span class="pill-icon">🟢</span>
+                                <span class="pill-text">Singapore Tourism</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Group: Banking -->
+                    <div class="preset-group">
+                        <div class="preset-group-title harmful-title">
+                            <span class="group-dot dot-red"></span>
+                            <span>🏦 Banking &amp; Payments</span>
+                            <span class="group-subtag">High risk</span>
+                        </div>
+                        <div class="preset-pills-container">
+                            <button class="preset-pill danger" data-id="bank-refund"
+                                    data-prompt="Please process a refund for customer Tan Wei Ming, NRIC S1234567D, on Visa card 4532015112830366. Email the confirmation to weiming.tan@example.com."
+                                    data-system="bank"
+                                    data-expect="PERSON_NAME,SINGAPORE_NATIONAL_REGISTRATION_ID_NUMBER,CREDIT_CARD_NUMBER,EMAIL_ADDRESS"
+                                    data-scenario="The task still works on masked data"
+                                    data-desc="Name, NRIC, card and email are replaced at the gateway. With a bank-assistant system instruction Gemini completes the refund using the secure tokens.">
+                                <span class="pill-icon">🔴</span>
+                                <span class="pill-text">Refund: Name + NRIC + Card + Email</span>
+                            </button>
+                            <button class="preset-pill danger" data-id="bank-transfer"
+                                    data-prompt="Transfer SGD 5,000 from DBS account 012-345678-9 to IBAN GB82WEST12345698765432 (SWIFT DBSSSGSGXXX). Draft the payment instruction."
+                                    data-system="bank"
+                                    data-expect="SG_BANK_ACCOUNT,IBAN_CODE,SWIFT_CODE"
+                                    data-scenario="Bank account, IBAN and SWIFT"
+                                    data-desc="A custom SG bank-account detector (regex + hotword) plus built-in IBAN and SWIFT detectors.">
+                                <span class="pill-icon">🔴</span>
+                                <span class="pill-text">Transfer: Account + IBAN + SWIFT</span>
+                            </button>
+                            <button class="preset-pill danger" data-id="bank-cvv"
+                                    data-prompt="My card is 4532 0151 1283 0366, expiry 09/28, CVV 123. Is it still valid for online payments?"
+                                    data-system="bank"
+                                    data-expect="CREDIT_CARD_NUMBER,CREDIT_CARD_DATA"
+                                    data-scenario="Formatting tricks: spaced card + CVV"
+                                    data-desc="Spaces inside the card number don't evade detection, and the CVV is caught as card data.">
+                                <span class="pill-icon">🔴</span>
+                                <span class="pill-text">Spaced Card + CVV</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Group: Identity / Healthcare / HR -->
+                    <div class="preset-group">
+                        <div class="preset-group-title harmful-title">
+                            <span class="group-dot dot-red"></span>
+                            <span>🪪 Identity, Healthcare &amp; HR</span>
+                            <span class="group-subtag">Regulated</span>
+                        </div>
+                        <div class="preset-pills-container">
+                            <button class="preset-pill danger" data-id="identity-fin"
+                                    data-prompt="Verify identity documents for onboarding: foreign worker FIN G1234567X and his Singaporean spouse's passport E1234567A. Summarise what still needs checking."
+                                    data-system="bank"
+                                    data-expect="SINGAPORE_NATIONAL_REGISTRATION_ID_NUMBER,SINGAPORE_PASSPORT"
+                                    data-scenario="NRIC/FIN vs passport"
+                                    data-desc="A FIN is labelled as NRIC/FIN (checksum-validated) and the passport as a Singapore passport. Exclusion rules stop overlapping labels.">
+                                <span class="pill-icon">🔴</span>
+                                <span class="pill-text">FIN + SG Passport</span>
+                            </button>
+                            <button class="preset-pill danger" data-id="identity-bare"
+                                    data-prompt="Customer S1234567D called again about the late fee. Summarise the next best action."
+                                    data-system="bank"
+                                    data-expect="SG_NRIC_FIN"
+                                    data-scenario="Bare NRIC, no keyword"
+                                    data-desc="The built-in detector needs context like 'NRIC'. A custom SG_NRIC_FIN pattern catches IDs typed without it.">
+                                <span class="pill-icon">🔴</span>
+                                <span class="pill-text">Bare NRIC (no keyword)</span>
+                            </button>
+                            <button class="preset-pill danger" data-id="health-note"
+                                    data-prompt="Patient Lim Mei Ling, NRIC S7654321F, DOB 12/03/1985, diagnosed with type 2 diabetes. Draft a short follow-up note."
+                                    data-system="clinic"
+                                    data-expect="PERSON_NAME,SINGAPORE_NATIONAL_REGISTRATION_ID_NUMBER,DATE_OF_BIRTH"
+                                    data-scenario="Healthcare: identifiers out, clinical context in"
+                                    data-desc="Name, NRIC and date of birth are masked; the diagnosis is kept so the model can still write a useful note.">
+                                <span class="pill-icon">🔴</span>
+                                <span class="pill-text">Clinic Follow-up Note</span>
+                            </button>
+                            <button class="preset-pill danger" data-id="hr-offer"
+                                    data-prompt="Employee Rajesh Kumar (NRIC S9876543C), salary SGD 8,500, home address 10 Anson Road #12-01 Singapore 079903. Draft a short offer letter."
+                                    data-system="hr"
+                                    data-expect="PERSON_NAME,SINGAPORE_NATIONAL_REGISTRATION_ID_NUMBER,STREET_ADDRESS"
+                                    data-scenario="HR: offer letter"
+                                    data-desc="Name, NRIC and home address are masked; salary and role details stay available to the model.">
+                                <span class="pill-icon">🔴</span>
+                                <span class="pill-text">HR Offer Letter</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Group: Secrets & multilingual -->
+                    <div class="preset-group">
+                        <div class="preset-group-title harmful-title">
+                            <span class="group-dot dot-red"></span>
+                            <span>🔑 Secrets &amp; 🌏 Multilingual</span>
+                            <span class="group-subtag">Beyond PII</span>
+                        </div>
+                        <div class="preset-pills-container">
+                            <button class="preset-pill danger" data-id="secrets"
+                                    data-prompt="Why does authentication fail with this config?&#10;api_key = &quot;AIzaSyDaGmWKa4JsXZ-HjGw7ISLn_3namBGewQe&quot;&#10;password: Hunter2!Secure"
+                                    data-expect="GCP_API_KEY,PASSWORD"
+                                    data-scenario="Developer leak: API key + password"
+                                    data-desc="Engineers paste configs into AI assistants. The Google API key and password never reach the model.">
+                                <span class="pill-icon">🔑</span>
+                                <span class="pill-text">API Key + Password</span>
+                            </button>
+                            <button class="preset-pill danger" data-id="multi-zh"
+                                    data-prompt="我的身份证号码是 NRIC S1234567D，信用卡 4532015112830366。请帮我确认。"
+                                    data-system="bank"
+                                    data-expect="SINGAPORE_NATIONAL_REGISTRATION_ID_NUMBER,CREDIT_CARD_NUMBER"
+                                    data-scenario="Multilingual: Chinese"
+                                    data-desc="Detection is language-agnostic for structured identifiers.">
+                                <span class="pill-icon">🌏</span>
+                                <span class="pill-text">中文 NRIC + Card</span>
+                            </button>
+                            <button class="preset-pill danger" data-id="multi-ms"
+                                    data-prompt="Sila semak akaun pelanggan dengan NRIC S7654321F dan kad kredit 4532015112830366."
+                                    data-system="bank"
+                                    data-expect="SINGAPORE_NATIONAL_REGISTRATION_ID_NUMBER,CREDIT_CARD_NUMBER"
+                                    data-scenario="Multilingual: Malay"
+                                    data-desc="Same protection for a Bahasa Melayu prompt.">
+                                <span class="pill-icon">🌏</span>
+                                <span class="pill-text">Bahasa NRIC + Card</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Group: Outbound -->
+                    <div class="preset-group">
+                        <div class="preset-group-title" style="color:var(--warning)">
+                            <span class="group-dot" style="background:var(--warning);box-shadow:0 0 6px rgba(217,119,6,0.4);"></span>
+                            <span>Outbound: model-generated data</span>
+                            <span class="group-subtag">Both policies ON</span>
+                        </div>
+                        <div class="preset-pills-container">
+                            <button class="preset-pill warning" data-id="outbound-invent"
+                                    data-prompt="Create one realistic sample Singapore customer for QA testing. Output exactly two lines: 'Full Name: &lt;a realistic full name&gt;' and 'NRIC: &lt;a valid-format NRIC&gt;'."
+                                    data-expect="PERSON_NAME,SINGAPORE_NATIONAL_REGISTRATION_ID_NUMBER|SG_NRIC_FIN"
+                                    data-expect-dir="outbound"
+                                    data-scenario="Catching what the model makes up"
+                                    data-desc="The prompt is clean, but the model invents a name and an NRIC. Outbound SDP masks them before they reach the client.">
+                                <span class="pill-icon">🟠</span>
+                                <span class="pill-text">Model Invents a Customer</span>
+                            </button>
+                            <button class="preset-pill warning" data-id="outbound-reassemble"
+                                    data-prompt="Join these fragments with no separators and output only two lines: 'Card: ' followed by 4532 + 0151 + 1283 + 0366, and 'ID: ' followed by S + 1234567 + D."
+                                    data-expect="CREDIT_CARD_NUMBER,SINGAPORE_NATIONAL_REGISTRATION_ID_NUMBER|SG_NRIC_FIN"
+                                    data-expect-dir="outbound"
+                                    data-scenario="Split-and-reassemble evasion"
+                                    data-desc="The PII is smuggled in as fragments that no inbound detector flags. Gemini stitches them back together, and outbound SDP catches the rebuilt card number and NRIC.">
+                                <span class="pill-icon">🟠</span>
+                                <span class="pill-text">Fragments Reassembled by the Model</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Scenario context (filled when a preset is chosen) -->
+                    <div class="scenario-context-callout" id="scenarioCallout" style="display:none;">
+                        <span class="scenario-callout-icon" id="scenarioCalloutIcon">🎯</span>
+                        <div class="scenario-callout-body">
+                            <strong id="scenarioCalloutTitle"></strong>
+                            <p id="scenarioCalloutDesc"></p>
+                            <p class="scenario-expect" id="scenarioExpect"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custom Prompt Editor -->
+                <div class="panel-section prompt-box-section">
+                    <div class="section-header">
+                        <div class="header-icon-title">
+                            <span class="section-icon">✍️</span>
+                            <h3>Interactive Prompt Editor</h3>
+                        </div>
+                        <span class="char-badge" id="charBadge">0 / 2000 chars</span>
+                    </div>
+
+                    <details class="system-details" id="systemDetails">
+                        <summary>
+                            <span>🧭 System instruction</span>
+                            <span class="system-badge" id="systemBadge">none</span>
+                        </summary>
+                        <textarea id="systemInput" rows="3" maxlength="2000" placeholder="Optional. Also de-identified by SDP before it reaches Gemini."></textarea>
+                    </details>
+
+                    <div class="textarea-container">
+                        <textarea id="promptInput" rows="6" maxlength="2000" placeholder="Type a prompt with sensitive data (NRIC, card, email, API key...) or pick a preset above. ⌘/Ctrl+Enter to run."></textarea>
+                    </div>
+
+                    <div class="execution-actions">
+                        <button class="btn-primary-run" id="sendBtn" title="Run via Apigee (⌘/Ctrl+Enter)">
+                            <span class="btn-icon">⚡</span>
+                            <span class="btn-text">Execute via Apigee Gateway</span>
+                            <span class="btn-spinner" id="btnSpinner" style="display:none;"></span>
+                        </button>
+
+                        <div class="utility-btns">
+                            <button class="btn-util btn-compare" id="compareBtn" title="Run the same prompt with SDP OFF and ON side by side">
+                                <span class="util-icon">⚖️</span> Compare OFF vs ON
+                            </button>
+                            <button class="btn-util" id="clearBtn" title="Clear prompt">
+                                <span class="util-icon">🗑️</span> Clear
+                            </button>
+                            <button class="btn-util" id="btnOpenAdminFromLeft" title="View Cloud Logging audit trail">
+                                <span class="util-icon">📊</span> Audit Logs
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Architecture Topology Section -->
+                <div class="panel-section">
+                    <div class="arch-card-section">
+                        <div class="arch-card-header">
+                            <div class="arch-icon-wrapper">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+                                    <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+                                    <line x1="6" y1="6" x2="6.01" y2="6"></line>
+                                    <line x1="6" y1="18" x2="6.01" y2="18"></line>
+                                </svg>
+                            </div>
+                            <div class="arch-title-group">
+                                <div class="arch-title-row">
+                                    <h4 class="arch-title">Architecture Topology</h4>
+                                    <span class="arch-pill-tag">Apigee + SDP + Logging</span>
+                                </div>
+                                <p class="arch-desc">End-to-end bidirectional payload inspection, token de-identification, and Cloud Logging.</p>
+                            </div>
+                        </div>
+                        <button class="btn-view-arch" id="btnViewArch">
+                            <span>View Architecture Diagram</span>
+                            <span>↗</span>
+                        </button>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- RESIZABLE SPLITTER -->
+            <div class="splitter" id="splitter" title="Drag to resize panels">
+                <div class="splitter-handle"></div>
+            </div>
+
+            <!-- RIGHT PANEL: Live Execution Inspector Card -->
+            <section class="right-panel results-area" id="rightPanel">
+
+                <!-- Compare: SDP OFF vs ON (hidden until used) -->
+                <div class="compare-card" id="compareCard" style="display:none;">
+                    <div class="compare-header">
+                        <div class="compare-title">
+                            <span>⚖️</span>
+                            <strong>Same prompt, two policies</strong>
+                            <span class="compare-sub">Only this demo app may switch SDP off (<code>sdp_bypass_allowed=true</code>)</span>
+                        </div>
+                        <button class="modal-close-btn" id="btnCloseCompare" title="Close comparison">&times;</button>
+                    </div>
+                    <div class="compare-grid">
+                        <div class="compare-pane pane-unprotected">
+                            <div class="pane-head"><span>🚨 UNPROTECTED • SDP OFF</span><span class="pane-ms" id="cmpOffMs">--</span></div>
+                            <div class="pane-label">Gemini received</div>
+                            <div class="pane-body" id="cmpOffSaw"></div>
+                            <div class="pane-label">Client received</div>
+                            <div class="pane-body" id="cmpOffOut"></div>
+                        </div>
+                        <div class="compare-pane pane-protected">
+                            <div class="pane-head"><span>🛡️ PROTECTED • SDP ON</span><span class="pane-ms" id="cmpOnMs">--</span></div>
+                            <div class="pane-label">Gemini received</div>
+                            <div class="pane-body" id="cmpOnSaw"></div>
+                            <div class="pane-label">Client received</div>
+                            <div class="pane-body" id="cmpOnOut"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Main Live Execution Result Card -->
+                <div class="result-card result-card-streaming" id="cardMain">
+                    
+                    <!-- Card Header -->
+                    <div class="card-header">
+                        <div class="proxy-identity">
+                            <div class="proxy-title-row">
+                                <span class="proxy-type-tag tag-json">REST / JSON</span>
+                                <span class="wide-view-badge">
+                                    <span class="badge-pulse-dot"></span>
+                                    LIVE GATEWAY
+                                </span>
+                            </div>
+                            <h3>gemini-sdp-proxy</h3>
+                            <span class="endpoint-path" id="endpointPath">POST https://YOUR_APIGEE_IP.nip.io/gemini-sdp-proxy</span>
+                        </div>
+                        <span class="status-pill status-idle" id="statusPill">IDLE</span>
+                    </div>
+
+                    <!-- Metrics Bar -->
+                    <div class="metrics-bar">
+                        <div class="metric-item">
+                            <span class="metric-label">LATENCY</span>
+                            <span class="metric-val" id="metricLatency">-- ms</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">INBOUND PII</span>
+                            <span class="metric-val" id="metricInboundPII">--</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">OUTBOUND PII</span>
+                            <span class="metric-val" id="metricOutboundPII">--</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">LLM TOKENS</span>
+                            <span class="metric-val" id="metricTokens">--</span>
+                        </div>
+                    </div>
+
+                    <!-- Live request pipeline with per-stage timing (X-SDP-Timing) -->
+                    <div class="pipeline-wrap">
+                        <div class="pipeline" id="pipeline">
+                            <div class="pipe-node" data-stage="client">
+                                <span class="pipe-icon">💻</span>
+                                <span class="pipe-name">Client</span>
+                                <span class="pipe-ms" data-ms="network">&nbsp;</span>
+                            </div>
+                            <div class="pipe-link"></div>
+                            <div class="pipe-node" data-stage="gateway">
+                                <span class="pipe-icon">🛡️</span>
+                                <span class="pipe-name">Apigee</span>
+                                <span class="pipe-sub">Key · Spike · Quota</span>
+                                <span class="pipe-ms" data-ms="gateway">&nbsp;</span>
+                            </div>
+                            <div class="pipe-link"></div>
+                            <div class="pipe-node" data-stage="sdp_in">
+                                <span class="pipe-icon">🔍</span>
+                                <span class="pipe-name">SDP Inbound</span>
+                                <span class="pipe-sub" data-count="sdp_in">de-identify</span>
+                                <span class="pipe-ms" data-ms="dlp_in">&nbsp;</span>
+                            </div>
+                            <div class="pipe-link"></div>
+                            <div class="pipe-node" data-stage="model">
+                                <span class="pipe-icon">✨</span>
+                                <span class="pipe-name">Gemini</span>
+                                <span class="pipe-sub" id="pipeModelName">3.5 Flash-Lite</span>
+                                <span class="pipe-ms" data-ms="model">&nbsp;</span>
+                            </div>
+                            <div class="pipe-link"></div>
+                            <div class="pipe-node" data-stage="sdp_out">
+                                <span class="pipe-icon">🔍</span>
+                                <span class="pipe-name">SDP Outbound</span>
+                                <span class="pipe-sub" data-count="sdp_out">de-identify</span>
+                                <span class="pipe-ms" data-ms="dlp_out">&nbsp;</span>
+                            </div>
+                            <div class="pipe-link"></div>
+                            <div class="pipe-node" data-stage="done">
+                                <span class="pipe-icon">✅</span>
+                                <span class="pipe-name">Client</span>
+                                <span class="pipe-ms" data-ms="elapsed">&nbsp;</span>
+                            </div>
+                        </div>
+                        <div class="latency-bar" id="latencyBar" title="Where the time goes"></div>
+                    </div>
+
+                    <!-- Security Alert Banner -->
+                    <div class="security-banner banner-idle" id="securityBanner">
+                        <span class="security-icon" id="bannerIcon">🛡️</span>
+                        <div class="security-text">
+                            <strong id="bannerTitle">Ready for Execution</strong>
+                            <p id="bannerDesc">Pick a preset on the left, or type a prompt with sensitive data, to see Apigee + Sensitive Data Protection in action.</p>
+                        </div>
+                    </div>
+
+                    <!-- Model Output Container -->
+                    <div class="output-container">
+                        <div class="output-header">
+                            <span>Response delivered to client</span>
+                            <span class="token-leak-indicator leak-zero" id="tokenLeakIndicator">WAITING</span>
+                        </div>
+                        <div class="output-body" id="modelOutputBox">
+                            <span class="placeholder-text">The model response appears here after the gateway returns it...</span>
+                        </div>
+                    </div>
+
+                    <!-- SDP X-ray: what each hop saw -->
+                    <div class="audit-card">
+                        <div class="audit-header">
+                            <div class="audit-title-wrap">
+                                <span class="audit-title-icon">🔬</span>
+                                <span class="audit-title">SDP X-ray: what each hop saw</span>
+                            </div>
+                            <span class="audit-status-badge badge-clean" id="auditStatusBadge">ACTIVE MONITORING</span>
+                        </div>
+
+                        <div class="xray-grid">
+                            <div class="xray-col">
+                                <div class="xray-head"><span class="xray-num">1</span> You typed <span class="xray-sub">browser only, never stored</span></div>
+                                <div class="xray-body" id="xrayTyped"><span class="xray-empty">No request yet.</span></div>
+                            </div>
+                            <div class="xray-col">
+                                <div class="xray-head"><span class="xray-num">2</span> Gemini saw <span class="xray-sub">after inbound SDP</span></div>
+                                <div class="xray-body" id="xraySaw"><span class="xray-empty">No request yet.</span></div>
+                            </div>
+                            <div class="xray-col">
+                                <div class="xray-head"><span class="xray-num">3</span> Outbound SDP <span class="xray-sub">model → client</span></div>
+                                <div class="xray-body" id="xrayOut"><span class="xray-empty">No response yet.</span></div>
+                            </div>
+                        </div>
+
+                        <div class="xray-footer">
+                            <div class="xray-legend" id="xrayLegend"></div>
+                            <div class="xray-footer-right">
+                                <span class="self-test" id="selfTest"></span>
+                                <a class="logs-link" id="logsLink" href="#" target="_blank" rel="noopener noreferrer" style="display:none;">View in Cloud Logging ↗</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Technical Telemetry Accordion / Drawer -->
+                    <details class="debug-drawer" id="debugDrawer">
+                        <summary>
+                            <span>Telemetry &amp; Apigee Response Headers</span>
+                            <span class="events-count-badge" id="telemetryBadge">0 headers</span>
+                        </summary>
+                        <div class="events-log-list" id="debugContent" style="padding:10px;font-family:var(--font-mono);font-size:11px;">
+                            <pre id="rawHeadersBox" style="margin:0;white-space:pre-wrap;color:var(--text-secondary);font-size:11px;">// Apigee response headers will appear here</pre>
+                        </div>
+                    </details>
+
+                </div>
+
+            </section>
+        </main>
+    </div>
+
+    <!-- FLOATING RIGHT-EDGE DRAWER TRIGGER TAB -->
+    <div class="floating-admin-trigger" id="floatingAdminTrigger" title="Open Security Audit &amp; Cloud Logging Drawer">
+        <span class="trigger-icon">📊</span>
+        <span class="trigger-text">SECURITY AUDIT &amp; LOGS</span>
+        <span class="trigger-badge">LIVE</span>
+    </div>
+
+    <!-- SLIDE-OUT POP-UP DRAWER BACKDROP -->
+    <div class="admin-drawer-backdrop" id="adminDrawerBackdrop"></div>
+
+    <!-- SLIDE-OUT POP-UP DRAWER: CLOUD LOGGING AUDIT TRAIL & ANALYTICS -->
+    <aside class="admin-drawer" id="adminDrawer">
+        <!-- Drawer Header -->
+        <div class="admin-drawer-header">
+            <div class="admin-header-left">
+                <div class="admin-header-icon">📊</div>
+                <div class="admin-header-titles">
+                    <div class="admin-title-row">
+                        <h3>Security Audit &amp; Cloud Logging Telemetry</h3>
+                        <span class="admin-badge">Log: <code id="adminLogBadge">apigee-sdp-logs</code></span>
+                        <span class="admin-badge">Project: <code id="adminProjectBadge">YOUR_GCP_PROJECT_ID</code></span>
+                    </div>
+                    <span class="admin-subtitle">Live bidirectional inspection events synchronized from Google Cloud Logging</span>
+                </div>
+            </div>
+            <button class="admin-drawer-close-btn" id="btnCloseAdminDrawer" title="Close Drawer">&times;</button>
+        </div>
+
+        <!-- Drawer Content -->
+        <div class="admin-drawer-content">
+            
+            <!-- Toolbar -->
+            <div class="admin-toolbar">
+                <div class="admin-filter-group">
+                    <span class="toolbar-label">Time Filter:</span>
+                    <div class="time-filter-buttons">
+                        <button class="time-btn" data-hours="1">1h</button>
+                        <button class="time-btn" data-hours="6">6h</button>
+                        <button class="time-btn active" data-hours="24">24h</button>
+                        <button class="time-btn" data-hours="168">7d</button>
+                    </div>
+                </div>
+
+                <div class="admin-toolbar-actions">
+                    <div class="proxy-select-wrap">
+                        <span class="toolbar-label">Direction:</span>
+                        <select class="admin-select" id="adminDirectionSelect">
+                            <option value="all">All Traffic (Inbound + Outbound)</option>
+                            <option value="inbound">Inbound PreFlow Only</option>
+                            <option value="outbound">Outbound PostFlow Only</option>
+                        </select>
+                    </div>
+
+                    <button class="btn-refresh-data" id="btnRefreshAdmin">
+                        <span class="refresh-icon">🔄</span>
+                        <span>Sync Cloud Logging</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stat Chips Row -->
+            <div class="admin-stats-row">
+                <div class="admin-stat-chip">
+                    <span class="chip-label">Total SDP Scans</span>
+                    <span class="chip-value" id="kpiTotalScans">0</span>
+                </div>
+                <div class="admin-stat-chip chip-blocked">
+                    <span class="chip-label">Inbound PII Incidents</span>
+                    <span class="chip-value" id="kpiInboundDetected" style="color:var(--danger)">0</span>
+                </div>
+                <div class="admin-stat-chip chip-blocked">
+                    <span class="chip-label">Outbound PII Prevented</span>
+                    <span class="chip-value" id="kpiOutboundDetected" style="color:var(--warning)">0</span>
+                </div>
+                <div class="admin-stat-chip chip-clean">
+                    <span class="chip-label">De-identifications Applied</span>
+                    <span class="chip-value" id="kpiTotalDeidentified" style="color:var(--success)">0</span>
+                </div>
+            </div>
+
+            <!-- Visual Charts Grid -->
+            <div class="admin-charts-grid">
+                <!-- Stacked Bar: Traffic Inspection Breakdown -->
+                <div class="chart-box">
+                    <div class="chart-box-header">
+                        <div class="chart-title-wrap">
+                            <h4>Traffic Inspection Breakdown</h4>
+                            <span class="chart-tag">Inbound vs Outbound</span>
+                        </div>
+                    </div>
+                    <div class="chart-container" id="trafficChartContainer">
+                        <!-- Dynamic stacked bars rendered by JS -->
+                    </div>
+                </div>
+
+                <!-- Distribution: InfoTypes Breakdown -->
+                <div class="chart-box">
+                    <div class="chart-box-header">
+                        <div class="chart-title-wrap">
+                            <h4>Sensitive InfoType Distribution</h4>
+                            <span class="chart-tag">DLP Findings</span>
+                        </div>
+                    </div>
+                    <div class="chart-container" id="infoTypeChartContainer">
+                        <!-- Dynamic distribution rendered by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Audit Table Box -->
+            <div class="admin-table-box">
+                <div class="table-box-header">
+                    <div class="table-title-group">
+                        <h4>Cloud Logging Audit Trail</h4>
+                        <span class="table-badge" id="tableRecordCount">0 records</span>
+                    </div>
+                    <input type="text" class="admin-search-input" id="adminTableSearch" placeholder="Search by infoType, status, direction or sanitized text...">
+                </div>
+                <div class="table-wrapper">
+                    <table class="admin-table" id="adminTable">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Direction</th>
+                                <th>Detected InfoTypes</th>
+                                <th>Count</th>
+                                <th>Status</th>
+                                <th>Sanitized Output Preview</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminTableBody">
+                            <tr>
+                                <td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted);">Loading Cloud Logging audit logs...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </aside>
+
+    <!-- ARCHITECTURE DIAGRAM MODAL POP-UP -->
+    <div class="modal-overlay" id="archModal" style="display:none;">
+        <div class="modal-card arch-modal-card">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <img src="assets/google-cloud.png" alt="GCP" class="arch-modal-gcp-logo">
+                    <h3>Apigee X + Sensitive Data Protection (SDP) Architecture</h3>
+                    <span class="arch-modal-badge">Enterprise Defense-in-Depth</span>
+                </div>
+                <button class="modal-close-btn" id="btnCloseArchModal">&times;</button>
+            </div>
+            <div class="arch-modal-body">
+                <div class="arch-diagram-wrapper">
+                    <img src="assets/architecture-diagram.png" alt="Apigee SDP Architecture Diagram" class="arch-modal-img">
+                </div>
+                <div class="arch-steps-grid">
+                    <div class="arch-step-card">
+                        <span class="step-num">STEP 01</span>
+                        <h5 class="step-title">Client Prompt Ingress</h5>
+                        <p class="step-desc">The app calls Apigee with its API key. Apigee enforces spike arrest and an LLM token quota per app.</p>
+                    </div>
+                    <div class="arch-step-card">
+                        <span class="step-num">STEP 02</span>
+                        <h5 class="step-title">Inbound SDP De-identification</h5>
+                        <p class="step-desc">Every text part (system instruction and all turns) goes to SDP in one <code>content:deidentify</code> call (<code id="archTemplates">inspect-sensitive-v2</code>). Findings become infoType tokens. Fails closed.</p>
+                    </div>
+                    <div class="arch-step-card">
+                        <span class="step-num">STEP 03</span>
+                        <h5 class="step-title">Cloud Logging Audit</h5>
+                        <p class="step-desc">Apigee writes a structured, sanitized audit entry to <code id="archLogPath">projects/YOUR_GCP_PROJECT_ID/logs/apigee-sdp-logs</code>.</p>
+                    </div>
+                    <div class="arch-step-card">
+                        <span class="step-num">STEP 04</span>
+                        <h5 class="step-title">Vertex AI Gemini</h5>
+                        <p class="step-desc">Only sanitized text reaches <span id="archModel">gemini-3.5-flash-lite</span> on the Vertex AI global endpoint.</p>
+                    </div>
+                    <div class="arch-step-card">
+                        <span class="step-num">STEP 05</span>
+                        <h5 class="step-title">Outbound SDP Scan</h5>
+                        <p class="step-desc">Apigee de-identifies every candidate in the model response, including anything the model invented, before returning it.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOG DETAIL MODAL -->
+    <div class="modal-overlay" id="logDetailModal" style="display:none;">
+        <div class="modal-card modal-card-wide">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <h3 id="modalLogTitle">Cloud Logging Audit Entry Detail</h3>
+                </div>
+                <button class="modal-close-btn" id="modalCloseBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-meta-grid" id="modalMetaGrid"></div>
+                <div class="modal-section-title">Raw Cloud Logging JSON Payload:</div>
+                <pre class="modal-payload-pre" id="modalLogJson"></pre>
+            </div>
+            <div class="modal-footer">
+                <a class="btn-modal-copy logs-link-modal" id="modalLogsLink" href="#" target="_blank" rel="noopener noreferrer" style="display:none;">Open in Cloud Logging ↗</a>
+                <button class="btn-modal-copy" id="btnCopyModalJson">Copy JSON</button>
+                <button class="btn-modal-close" id="btnCloseModalBottom">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GUIDED DEMO (PRESENT MODE) BAR -->
+    <div class="present-bar" id="presentBar" style="display:none;" role="dialog" aria-label="Guided demo">
+        <div class="present-step" id="presentStep">1 / 6</div>
+        <div class="present-text">
+            <strong id="presentTitle"></strong>
+            <p id="presentNote"></p>
+        </div>
+        <div class="present-actions">
+            <button class="present-nav" id="presentPrev" title="Previous (←)">←</button>
+            <button class="present-run" id="presentRun" title="Run this step (Enter)">▶ Run</button>
+            <button class="present-nav" id="presentNext" title="Next (→)">→</button>
+            <button class="present-nav" id="presentExit" title="Exit (Esc)">✕</button>
+        </div>
+    </div>
+
+    <!-- Toast notifications -->
+    <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+    <!-- Application Script -->
+    <script src="app.js"></script>
+</body>
+</html>

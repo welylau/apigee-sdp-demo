@@ -1,0 +1,6 @@
+.env
+audit_logs.json
+__pycache__/
+*.pyc
+.DS_Store
+run-ui.sh

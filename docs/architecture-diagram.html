@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<!--
+  Source for WebUI/static/assets/architecture-diagram.png
+  Regenerate: ./docs/render-architecture.sh   (headless Chrome, 2x scale)
+  Keep in sync with gemini-sdp-proxy/apiproxy/proxies/default.xml and sdp.properties.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  :root {
+    --blue: #1a73e8; --blue-d: #1967d2; --blue-l: #e8f0fe; --blue-b: #aecbfa;
+    --orange: #f04d23; --orange-l: #fef3f0; --orange-b: #fed7cc;
+    --green: #188038; --green-l: #e6f4ea; --green-b: #a8dab5;
+    --red: #c5221f; --red-l: #fce8e6; --red-b: #f6aea9;
+    --purple: #7b1fa2; --purple-l: #f3e8fd; --purple-b: #d7aefb;
+    --gray9: #202124; --gray7: #5f6368; --gray3: #dadce0; --gray1: #f1f3f4; --gray0: #f8f9fa;
+    --mono: "JetBrains Mono", Menlo, Monaco, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { width: 1600px; height: 960px; background: #fff; font-family: -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif; color: var(--gray9); position: relative; overflow: hidden; }
+  .box { position: absolute; border: 2px solid var(--gray9); border-radius: 14px; background: #fff; }
+  .title { font-size: 21px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+  .title img { width: 28px; height: 28px; }
+  .sub { font-size: 12.5px; color: var(--gray7); margin-top: 3px; }
+  .pill { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+  .p-blue { background: var(--blue-l); color: var(--blue-d); border: 1px solid var(--blue-b); }
+  .p-orange { background: var(--orange-l); color: var(--orange); border: 1px solid var(--orange-b); }
+  .p-green { background: var(--green-l); color: var(--green); border: 1px solid var(--green-b); }
+  .p-red { background: var(--red-l); color: var(--red); border: 1px solid var(--red-b); }
+  .p-purple { background: var(--purple-l); color: var(--purple); border: 1px solid var(--purple-b); }
+  .p-gray { background: var(--gray1); color: var(--gray7); border: 1px solid var(--gray3); }
+  code, .mono { font-family: var(--mono); }
+  .code { font-family: var(--mono); font-size: 11px; background: var(--gray0); border: 1px solid var(--gray3); border-radius: 6px; padding: 5px 8px; color: var(--gray9); line-height: 1.45; }
+
+  /* Top services */
+  #sdp { left: 360px; top: 18px; width: 600px; height: 182px; padding: 14px 18px; border-color: var(--orange); }
+  #sdp .title { color: var(--orange); }
+  #log { left: 1270px; top: 18px; width: 310px; height: 182px; padding: 14px 18px; border-color: var(--purple); }
+  #log .title { color: var(--purple); }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; align-items: center; }
+
+  /* Web UI */
+  #ui { left: 20px; top: 250px; width: 250px; height: 520px; padding: 16px; }
+  #ui h2 { font-size: 26px; margin-top: 10px; }
+  .feat { margin-top: 12px; border: 1px solid var(--gray3); border-radius: 10px; background: var(--gray0); padding: 10px 12px; }
+  .feat li { list-style: none; font-size: 12.5px; padding: 3px 0; display: flex; gap: 7px; }
+  .feat li b { color: var(--blue-d); font-weight: 700; }
+  .hdrs { margin-top: 12px; font-size: 12px; }
+  .hdrs div { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px dashed var(--gray3); }
+  .hdrs div:last-child { border-bottom: 0; }
+
+  /* Apigee */
+  #apigee { left: 360px; top: 244px; width: 820px; height: 562px; padding: 14px 18px; background: #fcfcfd; }
+  .ahead { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--gray3); padding-bottom: 10px; }
+  .lane { margin-top: 10px; border: 1.5px solid var(--blue-b); border-radius: 12px; background: var(--blue-l); padding: 8px 10px 10px; }
+  .lane.resp { border-color: var(--green-b); background: var(--green-l); }
+  .lane-h { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 700; color: var(--blue-d); margin-bottom: 7px; }
+  .lane.resp .lane-h { color: var(--green); }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+  .step { background: #fff; border: 1px solid var(--gray3); border-left: 4px solid var(--gray7); border-radius: 8px; padding: 6px 8px; height: 70px; position: relative; }
+  .step .n { position: absolute; top: 6px; right: 7px; font-size: 10px; font-weight: 800; color: var(--gray7); }
+  .step .nm { font-family: var(--mono); font-size: 10.5px; font-weight: 700; color: var(--gray9); padding-right: 16px; }
+  .step .d { font-size: 11px; color: var(--gray7); margin-top: 3px; line-height: 1.3; }
+  .step .x { position: absolute; bottom: 5px; right: 6px; }
+  .step .x .pill { font-size: 9.5px; padding: 1px 6px; }
+  .s-id { border-left-color: var(--blue); }
+  .s-sdp { border-left-color: var(--orange); background: #fffaf8; }
+  .s-log { border-left-color: var(--purple); }
+  .s-fault { border-left-color: var(--red); background: #fffafa; }
+  .s-obs { border-left-color: var(--green); }
+  .afoot { margin-top: 10px; display: flex; gap: 8px; }
+  .afoot .code { flex: 1; font-size: 10.5px; }
+
+  /* Vertex */
+  #vertex { left: 1270px; top: 250px; width: 310px; height: 520px; padding: 16px; }
+  .model { margin-top: 14px; border: 2px solid var(--blue); border-radius: 12px; padding: 14px; background: #fff; }
+  .model h3 { font-size: 20px; color: var(--blue); }
+  .kv { font-size: 12px; margin-top: 10px; }
+  .kv div { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dashed var(--gray3); }
+  .kv div span:last-child { font-family: var(--mono); font-weight: 600; }
+  .note { margin-top: 12px; font-size: 12px; background: var(--green-l); border: 1px solid var(--green-b); color: var(--green); border-radius: 8px; padding: 8px 10px; font-weight: 600; }
+
+  /* Legend */
+  #legend { position: absolute; left: 360px; top: 826px; width: 820px; display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--gray7); }
+
+  svg#wires { position: absolute; inset: 0; pointer-events: none; }
+  .lbl { position: absolute; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #fff; border: 1.5px solid; white-space: nowrap; text-align: center; line-height: 1.3; }
+</style>
+</head>
+<body>
+
+<svg id="wires" width="1600" height="960" viewBox="0 0 1600 960">
+  <defs>
+    <marker id="aB" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1a73e8"/></marker>
+    <marker id="aG" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#188038"/></marker>
+    <marker id="aO" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#f04d23"/></marker>
+    <marker id="aP" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7b1fa2"/></marker>
+  </defs>
+  <!-- Web UI <-> Apigee -->
+  <line x1="272" y1="395" x2="352" y2="395" stroke="#1a73e8" stroke-width="2.5" marker-end="url(#aB)"/>
+  <line x1="358" y1="610" x2="278" y2="610" stroke="#188038" stroke-width="2.5" stroke-dasharray="6 4" marker-end="url(#aG)"/>
+  <!-- Apigee <-> Vertex -->
+  <line x1="1182" y1="395" x2="1262" y2="395" stroke="#1a73e8" stroke-width="2.5" marker-end="url(#aB)"/>
+  <line x1="1268" y1="610" x2="1188" y2="610" stroke="#188038" stroke-width="2.5" stroke-dasharray="6 4" marker-end="url(#aG)"/>
+  <!-- Apigee <-> SDP (inbound + outbound callouts) -->
+  <line x1="540" y1="242" x2="540" y2="208" stroke="#f04d23" stroke-width="2.5" marker-end="url(#aO)"/>
+  <line x1="560" y1="204" x2="560" y2="238" stroke="#f04d23" stroke-width="2.5" stroke-dasharray="5 3" marker-end="url(#aO)"/>
+  <line x1="800" y1="242" x2="800" y2="208" stroke="#f04d23" stroke-width="2.5" marker-end="url(#aO)"/>
+  <line x1="820" y1="204" x2="820" y2="238" stroke="#f04d23" stroke-width="2.5" stroke-dasharray="5 3" marker-end="url(#aO)"/>
+  <!-- Apigee -> Cloud Logging -->
+  <path d="M1110 242 V110 H1262" fill="none" stroke="#7b1fa2" stroke-width="2.5" stroke-dasharray="6 4" marker-end="url(#aP)"/>
+  <!-- Cloud Logging -> Web UI admin drawer -->
+  <path d="M1582 97 H1590 V912 H145 V778" fill="none" stroke="#7b1fa2" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#aP)"/>
+</svg>
+
+<!-- Wire labels -->
+<div class="lbl" style="left:268px;top:352px;color:#1967d2;border-color:#aecbfa;">POST<br><span class="mono">x-api-key</span></div>
+<div class="lbl" style="left:276px;top:620px;color:#188038;border-color:#a8dab5;">200<br>masked</div>
+<div class="lbl" style="left:1180px;top:342px;color:#1967d2;border-color:#aecbfa;">sanitized<br>prompt only</div>
+<div class="lbl" style="left:1186px;top:620px;color:#188038;border-color:#a8dab5;">model<br>response</div>
+<div class="lbl" style="left:580px;top:210px;color:#f04d23;border-color:#fed7cc;">① inbound de-identify</div>
+<div class="lbl" style="left:840px;top:210px;color:#f04d23;border-color:#fed7cc;">② outbound</div>
+<div class="lbl" style="left:1120px;top:120px;color:#7b1fa2;border-color:#d7aefb;">audit<br>entries</div>
+<div class="lbl" style="left:640px;top:899px;color:#7b1fa2;border-color:#d7aefb;">Security audit drawer · <span class="mono">gcloud logging read</span> (sanitized entries only)</div>
+
+<!-- Sensitive Data Protection -->
+<div class="box" id="sdp">
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <div class="title"><img src="../WebUI/static/assets/gcp-logo.svg" alt="">Sensitive Data Protection</div>
+    <span class="pill p-orange">asia-southeast1 · data residency</span>
+  </div>
+  <div class="sub"><code>content:deidentify</code> · one table call per direction · every value replaced with its infoType, e.g. <code>[CREDIT_CARD_NUMBER]</code></div>
+  <div class="row">
+    <span class="pill p-orange mono">inspect-sensitive-v2</span>
+    <span class="pill p-orange mono">deidentify-sensitive-v2</span>
+    <span class="pill p-gray">custom:</span>
+    <span class="pill p-gray mono">SG_NRIC_FIN</span>
+    <span class="pill p-gray mono">SG_BANK_ACCOUNT</span>
+  </div>
+  <div class="sub" style="margin-top:7px;">Built-in: NRIC · passport · card · IBAN · SWIFT · name · email · phone · address · DOB · API key · password</div>
+</div>
+
+<!-- Cloud Logging -->
+<div class="box" id="log">
+  <div class="title"><img src="../WebUI/static/assets/gcp-logo.svg" alt="">Cloud Logging</div>
+  <div class="sub">Structured audit trail for every request: clean, masked, bypassed or blocked</div>
+  <div class="code" style="margin-top:9px;">projects/YOUR_GCP_PROJECT_ID/<br>logs/apigee-sdp-logs</div>
+  <div class="row" style="margin-top:7px;"><span class="pill p-green">no raw PII stored</span></div>
+</div>
+
+<!-- Web UI -->
+<div class="box" id="ui">
+  <span class="pill p-blue">Local · Python stdlib · Cloud Run-ready</span>
+  <h2>Web UI</h2>
+  <div class="sub">Demo workspace (API key stays server-side)</div>
+  <ul class="feat">
+    <li><b>▸</b> 14 presets + assistant personas</li>
+    <li><b>▸</b> Live pipeline &amp; latency split</li>
+    <li><b>▸</b> SDP X-ray: typed / Gemini saw / caught</li>
+    <li><b>▸</b> Compare SDP OFF vs ON</li>
+    <li><b>▸</b> Present mode (6-step story)</li>
+    <li><b>▸</b> Self-test per preset</li>
+  </ul>
+  <div class="hdrs">
+    <div><span>Auth</span><span class="pill p-gray mono">x-api-key</span></div>
+    <div><span>SDP toggles</span><span class="pill p-gray mono">sdp-inbound/outbound</span></div>
+    <div><span>X-ray</span><span class="pill p-gray mono">x-sdp-debug</span></div>
+    <div><span>Audit</span><span class="pill p-purple">Admin drawer</span></div>
+  </div>
+</div>
+
+<!-- Apigee -->
+<div class="box" id="apigee">
+  <div class="ahead">
+    <div>
+      <div class="title"><img src="../WebUI/static/assets/apigee-logo.svg" alt="">Apigee X AI Gateway <span class="mono" style="font-size:14px;color:#5f6368;font-weight:600;">/gemini-sdp-proxy</span></div>
+      <div class="sub">org <code>YOUR_GCP_PROJECT_ID</code> · env <code>default-dev</code> · config in property set <code>sdp.properties</code></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;">
+      <span class="pill p-blue">sdp_bypass_allowed</span>
+      <span class="pill p-blue">sdp_debug_allowed</span>
+    </div>
+  </div>
+
+  <div class="lane">
+    <div class="lane-h"><span>Request · ProxyEndpoint PreFlow</span><span class="pill p-blue">every text part incl. systemInstruction &amp; history</span></div>
+    <div class="grid">
+      <div class="step s-id"><span class="n">1</span><div class="nm">VA-Verify-API-Key</div><div class="d">Key → app &amp; attributes</div><span class="x"><span class="pill p-red">401</span></span></div>
+      <div class="step s-id"><span class="n">2</span><div class="nm">SA-Spike-Arrest</div><div class="d">30 req/min per app</div><span class="x"><span class="pill p-red">429</span></span></div>
+      <div class="step s-id"><span class="n">3</span><div class="nm">LTQ-Enforce-Tokens</div><div class="d">LLM token quota 50k/hour per app</div><span class="x"><span class="pill p-red">429</span></span></div>
+      <div class="step s-sdp"><span class="n">4</span><div class="nm">JS-SDP-Prepare-Inbound</div><div class="d">Collect parts · bypass &amp; debug gates</div><span class="x"><span class="pill p-red">403</span></span></div>
+      <div class="step s-sdp"><span class="n">5</span><div class="nm">SC-SDP-Deidentify-Inbound</div><div class="d">ServiceCallout → SDP ①</div></div>
+      <div class="step s-sdp"><span class="n">6</span><div class="nm">JS-SDP-Apply-Inbound</div><div class="d">Write back per part · fail closed</div><span class="x"><span class="pill p-red">502</span></span></div>
+      <div class="step s-log"><span class="n">7</span><div class="nm">ML-Log-SDP-Inbound</div><div class="d">Sanitized audit entry</div></div>
+      <div class="step s-id"><span class="n">8</span><div class="nm">AM-Prepare-Gemini-Request</div><div class="d">Strip key, toggles, x-sdp-debug</div></div>
+    </div>
+  </div>
+
+  <div class="lane resp">
+    <div class="lane-h"><span>Response · ProxyEndpoint PostFlow</span><span class="pill p-green">all candidates &amp; parts</span></div>
+    <div class="grid">
+      <div class="step s-id"><span class="n">1</span><div class="nm">LTQ-Count-Tokens</div><div class="d">usageMetadata.totalTokenCount</div></div>
+      <div class="step s-sdp"><span class="n">2</span><div class="nm">JS-SDP-Prepare-Outbound</div><div class="d">Collect model output parts</div></div>
+      <div class="step s-sdp"><span class="n">3</span><div class="nm">SC-SDP-Deidentify-Outbound</div><div class="d">ServiceCallout → SDP ②</div></div>
+      <div class="step s-sdp"><span class="n">4</span><div class="nm">JS-SDP-Apply-Outbound</div><div class="d">Mask generated PII · fail closed</div><span class="x"><span class="pill p-red">502</span></span></div>
+      <div class="step s-log"><span class="n">5</span><div class="nm">ML-Log-SDP-Outbound</div><div class="d">Findings, tokens, latency</div></div>
+      <div class="step s-obs"><span class="n">6</span><div class="nm">JS-SDP-Finalize-Response</div><div class="d">X-SDP-Timing · sdpAudit X-ray (gated)</div></div>
+      <div class="step s-obs"><span class="n">7</span><div class="nm">AM-Set-SDP-Response-Headers</div><div class="d">X-SDP-* telemetry · X-Request-Id</div></div>
+      <div class="step s-fault"><span class="n">!</span><div class="nm">DefaultFaultRule</div><div class="d">Sanitized error + stage · ML-Log-SDP-Error</div></div>
+    </div>
+  </div>
+
+  <div class="afoot">
+    <div class="code"><b>TargetEndpoint</b> · AM-Set-Target-URL · GoogleAccessToken as <span style="color:#1967d2">sa-apigee-aiservices@YOUR_GCP_PROJECT_ID</span></div>
+    <div class="code"><b>Fail closed</b> · content SDP could not verify is never forwarded</div>
+  </div>
+</div>
+
+<!-- Vertex AI -->
+<div class="box" id="vertex">
+  <div class="title"><img src="../WebUI/static/assets/gcp-logo.svg" alt="">Vertex AI</div>
+  <div class="sub">Global endpoint</div>
+  <div class="model">
+    <div style="display:flex;justify-content:space-between;align-items:center;"><h3>Gemini 3.5 Flash-Lite</h3></div>
+    <div class="row"><span class="pill p-blue mono">generateContent</span><span class="pill p-gray">buffered JSON</span></div>
+    <div class="code" style="margin-top:10px;">POST aiplatform.googleapis.com/v1/<br>projects/YOUR_GCP_PROJECT_ID/<br>locations/global/publishers/google/<br>models/gemini-3.5-flash-lite<br>:generateContent</div>
+  </div>
+  <div class="kv">
+    <div><span>Location</span><span>global</span></div>
+    <div><span>Auth</span><span>GoogleAccessToken</span></div>
+    <div><span>Timeouts</span><span>30s / 60s</span></div>
+  </div>
+  <div class="note">Sees only infoType tokens like <span class="mono">[PERSON_NAME]</span> and still completes the task</div>
+</div>
+
+<!-- Outcome legend -->
+<div id="legend">
+  <b style="color:#202124;">Outcomes</b>
+  <span class="pill p-green">200 masked / clean</span>
+  <span class="pill p-red">401 no key</span>
+  <span class="pill p-red">403 bypass denied</span>
+  <span class="pill p-red">429 spike / token quota</span>
+  <span class="pill p-red">502 SDP unavailable (fail closed)</span>
+  <span style="margin-left:auto;display:flex;gap:10px;align-items:center;">
+    <span style="display:inline-flex;gap:4px;align-items:center;"><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#1a73e8"></i>identity/traffic</span>
+    <span style="display:inline-flex;gap:4px;align-items:center;"><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#f04d23"></i>SDP</span>
+    <span style="display:inline-flex;gap:4px;align-items:center;"><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#7b1fa2"></i>audit</span>
+  </span>
+</div>
+
+</body>
+</html>

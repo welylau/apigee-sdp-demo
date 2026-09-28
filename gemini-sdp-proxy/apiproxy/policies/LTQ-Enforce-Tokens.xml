@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Paired with LTQ-Count-Tokens via the same SharedName. Checks the counter before calling the model. -->
+<LLMTokenQuota continueOnError="false" enabled="true" name="LTQ-Enforce-Tokens" type="rollingwindow">
+    <DisplayName>LLM Token Quota - Enforce</DisplayName>
+    <SharedName>sdp-demo-token-counter</SharedName>
+    <EnforceOnly>true</EnforceOnly>
+    <Identifier ref="verifyapikey.VA-Verify-API-Key.client_id"/>
+    <LLMModelSource>{propertyset.sdp.model}</LLMModelSource>
+    <Allow count="50000"/>
+    <Interval>1</Interval>
+    <TimeUnit>hour</TimeUnit>
+    <Distributed>true</Distributed>
+</LLMTokenQuota>

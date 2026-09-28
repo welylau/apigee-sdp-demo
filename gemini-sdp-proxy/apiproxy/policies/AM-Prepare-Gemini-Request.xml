@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<AssignMessage continueOnError="false" enabled="true" name="AM-Prepare-Gemini-Request">
+    <DisplayName>Prepare Gemini Request</DisplayName>
+    <Remove>
+        <Headers>
+            <Header name="x-api-key"/>
+            <Header name="x-goog-api-key"/>
+            <Header name="authorization"/>
+            <Header name="Authorization"/>
+            <Header name="sdp-inbound"/>
+            <Header name="sdp-outbound"/>
+            <Header name="x-sdp-debug"/>
+        </Headers>
+        <QueryParams>
+            <QueryParam name="key"/>
+            <QueryParam name="sdp-inbound"/>
+            <QueryParam name="sdp-outbound"/>
+        </QueryParams>
+    </Remove>
+    <Set>
+        <Headers>
+            <Header name="Content-Type">application/json</Header>
+        </Headers>
+    </Set>
+    <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+    <AssignTo createNew="false" transport="http" type="request"/>
+</AssignMessage>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<AssignMessage continueOnError="true" enabled="true" name="AM-Set-Error-Response">
+    <DisplayName>Set Sanitized Error Response</DisplayName>
+    <Set>
+        <Headers>
+            <Header name="Content-Type">application/json</Header>
+            <Header name="X-Request-Id">{messageid}</Header>
+        </Headers>
+        <Payload contentType="application/json" variablePrefix="@" variableSuffix="#">@sdperr.body#</Payload>
+        <StatusCode>{sdperr.status}</StatusCode>
+        <ReasonPhrase>{sdperr.phrase}</ReasonPhrase>
+    </Set>
+    <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+    <AssignTo createNew="false" transport="http" type="response"/>
+</AssignMessage>

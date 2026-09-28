@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Raised when an app without sdp_bypass_allowed=true tries to switch SDP off. -->
+<RaiseFault continueOnError="false" enabled="true" name="RF-SDP-Bypass-Forbidden">
+    <DisplayName>Raise SDP Bypass Forbidden</DisplayName>
+    <FaultResponse>
+        <Set>
+            <StatusCode>403</StatusCode>
+            <ReasonPhrase>Forbidden</ReasonPhrase>
+        </Set>
+    </FaultResponse>
+    <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+</RaiseFault>

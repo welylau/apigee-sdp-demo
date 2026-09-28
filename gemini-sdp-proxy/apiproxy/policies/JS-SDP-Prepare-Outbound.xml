@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Javascript continueOnError="false" enabled="true" timeLimit="500" name="JS-SDP-Prepare-Outbound">
+    <DisplayName>SDP Prepare-Outbound</DisplayName>
+    <IncludeURL>jsc://sdp-common.js</IncludeURL>
+    <ResourceURL>jsc://SDP-Prepare-Outbound.js</ResourceURL>
+</Javascript>

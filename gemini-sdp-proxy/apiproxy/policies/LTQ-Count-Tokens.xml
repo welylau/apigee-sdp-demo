@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Paired with LTQ-Enforce-Tokens via the same SharedName. Counts actual tokens used from the Gemini response. -->
+<LLMTokenQuota continueOnError="true" enabled="true" name="LTQ-Count-Tokens" type="rollingwindow">
+    <DisplayName>LLM Token Quota - Count</DisplayName>
+    <SharedName>sdp-demo-token-counter</SharedName>
+    <CountOnly>true</CountOnly>
+    <Identifier ref="verifyapikey.VA-Verify-API-Key.client_id"/>
+    <LLMTokenUsageSource>{jsonPath('$.usageMetadata.totalTokenCount',response.content,true)}</LLMTokenUsageSource>
+    <LLMModelSource>{propertyset.sdp.model}</LLMModelSource>
+    <Allow count="50000"/>
+    <Interval>1</Interval>
+    <TimeUnit>hour</TimeUnit>
+    <Distributed>true</Distributed>
+</LLMTokenQuota>

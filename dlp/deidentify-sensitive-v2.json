@@ -1,0 +1,11 @@
+{
+  "displayName": "deidentify-sensitive-v2",
+  "description": "Apigee SDP demo v2: replace every finding with its infoType token, e.g. [CREDIT_CARD_NUMBER]",
+  "deidentifyConfig": {
+    "infoTypeTransformations": {
+      "transformations": [
+        {"primitiveTransformation": {"replaceWithInfoTypeConfig": {}}}
+      ]
+    }
+  }
+}

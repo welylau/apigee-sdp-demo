@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Fail-closed gate: raised whenever any SDP step could not verify the content. -->
+<RaiseFault continueOnError="false" enabled="true" name="RF-SDP-Unavailable">
+    <DisplayName>Raise SDP Unavailable (fail-closed)</DisplayName>
+    <FaultResponse>
+        <Set>
+            <StatusCode>502</StatusCode>
+            <ReasonPhrase>Bad Gateway</ReasonPhrase>
+        </Set>
+    </FaultResponse>
+    <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+</RaiseFault>

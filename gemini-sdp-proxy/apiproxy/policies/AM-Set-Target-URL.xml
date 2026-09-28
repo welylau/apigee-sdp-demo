@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<AssignMessage continueOnError="false" enabled="true" name="AM-Set-Target-URL">
+    <DisplayName>Set Vertex AI Target URL from Property Set</DisplayName>
+    <AssignVariable>
+        <Name>target.url</Name>
+        <Template>https://{propertyset.sdp.vertex_host}/v1/projects/{propertyset.sdp.vertex_project}/locations/{propertyset.sdp.vertex_location}/publishers/google/models/{propertyset.sdp.model}:generateContent</Template>
+    </AssignVariable>
+    <IgnoreUnresolvedVariables>false</IgnoreUnresolvedVariables>
+</AssignMessage>

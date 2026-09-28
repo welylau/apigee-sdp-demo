@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<SpikeArrest continueOnError="false" enabled="true" name="SA-Spike-Arrest">
+    <DisplayName>Spike Arrest (per app)</DisplayName>
+    <Identifier ref="verifyapikey.VA-Verify-API-Key.client_id"/>
+    <Rate>30pm</Rate>
+    <UseEffectiveCount>true</UseEffectiveCount>
+</SpikeArrest>

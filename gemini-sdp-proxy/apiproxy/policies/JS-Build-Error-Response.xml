@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Javascript continueOnError="true" enabled="true" timeLimit="200" name="JS-Build-Error-Response">
+    <DisplayName>Build Sanitized Error Response</DisplayName>
+    <ResourceURL>jsc://Build-Error-Response.js</ResourceURL>
+</Javascript>

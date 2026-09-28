@@ -1,0 +1,93 @@
+{
+  "displayName": "inspect-sensitive-v2",
+  "description": "Apigee SDP demo v2: SG identity, payment, contact, banking and secrets detection",
+  "inspectConfig": {
+    "infoTypes": [
+      {"name": "SINGAPORE_NATIONAL_REGISTRATION_ID_NUMBER"},
+      {"name": "SINGAPORE_PASSPORT"},
+      {"name": "PASSPORT"},
+      {"name": "CREDIT_CARD_NUMBER"},
+      {"name": "CREDIT_CARD_DATA"},
+      {"name": "CREDIT_CARD_TRACK_NUMBER"},
+      {"name": "IBAN_CODE"},
+      {"name": "SWIFT_CODE"},
+      {"name": "PERSON_NAME"},
+      {"name": "EMAIL_ADDRESS"},
+      {"name": "PHONE_NUMBER"},
+      {"name": "STREET_ADDRESS"},
+      {"name": "DATE_OF_BIRTH"},
+      {"name": "GCP_API_KEY"},
+      {"name": "GCP_CREDENTIALS"},
+      {"name": "AUTH_TOKEN"},
+      {"name": "PASSWORD"}
+    ],
+    "minLikelihood": "POSSIBLE",
+    "minLikelihoodPerInfoType": [
+      {"infoType": {"name": "PERSON_NAME"}, "minLikelihood": "LIKELY"},
+      {"infoType": {"name": "STREET_ADDRESS"}, "minLikelihood": "LIKELY"}
+    ],
+    "customInfoTypes": [
+      {
+        "infoType": {"name": "SG_NRIC_FIN"},
+        "regex": {"pattern": "\\b[STFGM]\\d{7}[A-Z]\\b"},
+        "likelihood": "POSSIBLE"
+      },
+      {
+        "infoType": {"name": "SG_BANK_ACCOUNT"},
+        "regex": {"pattern": "\\b\\d{3}-\\d{5,6}-\\d{1,3}\\b"},
+        "likelihood": "UNLIKELY"
+      }
+    ],
+    "ruleSet": [
+      {
+        "infoTypes": [{"name": "SG_BANK_ACCOUNT"}],
+        "rules": [{
+          "hotwordRule": {
+            "hotwordRegex": {"pattern": "(?i)(account|acct|a/c|dbs|posb|ocbc|uob|bank)"},
+            "proximity": {"windowBefore": 40},
+            "likelihoodAdjustment": {"fixedLikelihood": "VERY_LIKELY"}
+          }
+        }]
+      },
+      {
+        "infoTypes": [{"name": "PERSON_NAME"}],
+        "rules": [{
+          "exclusionRule": {
+            "excludeInfoTypes": {"infoTypes": [{"name": "EMAIL_ADDRESS"}]},
+            "matchingType": "MATCHING_TYPE_PARTIAL_MATCH"
+          }
+        }]
+      },
+      {
+        "infoTypes": [{"name": "SINGAPORE_PASSPORT"}, {"name": "PASSPORT"}],
+        "rules": [{
+          "exclusionRule": {
+            "excludeInfoTypes": {"infoTypes": [
+              {"name": "SINGAPORE_NATIONAL_REGISTRATION_ID_NUMBER"},
+              {"name": "SG_NRIC_FIN"}
+            ]},
+            "matchingType": "MATCHING_TYPE_FULL_MATCH"
+          }
+        }]
+      },
+      {
+        "infoTypes": [{"name": "PASSPORT"}],
+        "rules": [{
+          "exclusionRule": {
+            "excludeInfoTypes": {"infoTypes": [{"name": "SINGAPORE_PASSPORT"}]},
+            "matchingType": "MATCHING_TYPE_FULL_MATCH"
+          }
+        }]
+      },
+      {
+        "infoTypes": [{"name": "CREDIT_CARD_DATA"}],
+        "rules": [{
+          "exclusionRule": {
+            "excludeInfoTypes": {"infoTypes": [{"name": "CREDIT_CARD_NUMBER"}]},
+            "matchingType": "MATCHING_TYPE_FULL_MATCH"
+          }
+        }]
+      }
+    ]
+  }
+}

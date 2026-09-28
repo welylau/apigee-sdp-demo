@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<AssignMessage continueOnError="true" enabled="true" name="AM-Set-SDP-Response-Headers">
+    <DisplayName>Set SDP Response Headers</DisplayName>
+    <Set>
+        <Headers>
+            <Header name="X-Request-Id">{messageid}</Header>
+            <Header name="X-SDP-Inbound-Policy-Enabled">{sdp.inbound.enabled}</Header>
+            <Header name="X-SDP-Inbound-Sensitive-Data-Detected">{sdp.inbound.findings.detected}</Header>
+            <Header name="X-SDP-Inbound-Findings-Count">{sdp.inbound.findings.count}</Header>
+            <Header name="X-SDP-Inbound-Finding-Types">{sdp.inbound.findings.types}</Header>
+            <Header name="X-SDP-Inbound-Parts-Inspected">{sdp.inbound.parts.count}</Header>
+            <Header name="X-SDP-Outbound-Policy-Enabled">{sdp.outbound.enabled}</Header>
+            <Header name="X-SDP-Outbound-Sensitive-Data-Detected">{sdp.outbound.findings.detected}</Header>
+            <Header name="X-SDP-Outbound-Findings-Count">{sdp.outbound.findings.count}</Header>
+            <Header name="X-SDP-Outbound-Finding-Types">{sdp.outbound.findings.types}</Header>
+            <Header name="X-SDP-Timing">{sdp.timing}</Header>
+            <Header name="X-SDP-Debug">{sdp.debug.status}</Header>
+            <Header name="X-SDP-Model">{propertyset.sdp.model}</Header>
+        </Headers>
+    </Set>
+    <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+    <AssignTo createNew="false" transport="http" type="response"/>
+</AssignMessage>

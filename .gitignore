@@ -1,0 +1,13 @@
+.DS_Store
+*.log
+.env
+**/.env
+__pycache__/
+*.pyc
+# Runtime audit data (may contain sanitized model output); regenerated locally
+WebUI/audit_logs.json
+# Local-only sanitize/restore tooling; .sanitize.map holds the real values
+sanitize.sh
+restore.sh
+.sanitize.map
+.sanitize.state

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- continueOnError=true: timing/debug decoration must never break a good response. -->
+<Javascript continueOnError="true" enabled="true" timeLimit="500" name="JS-SDP-Finalize-Response">
+    <DisplayName>SDP Finalize Response (timing + debug X-ray)</DisplayName>
+    <IncludeURL>jsc://sdp-common.js</IncludeURL>
+    <ResourceURL>jsc://SDP-Finalize-Response.js</ResourceURL>
+</Javascript>

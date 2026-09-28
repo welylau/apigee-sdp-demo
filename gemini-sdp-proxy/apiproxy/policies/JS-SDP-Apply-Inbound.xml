@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Javascript continueOnError="false" enabled="true" timeLimit="500" name="JS-SDP-Apply-Inbound">
+    <DisplayName>SDP Apply-Inbound</DisplayName>
+    <IncludeURL>jsc://sdp-common.js</IncludeURL>
+    <ResourceURL>jsc://SDP-Apply-Inbound.js</ResourceURL>
+</Javascript>

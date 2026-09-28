@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<APIProxy revision="8" name="gemini-sdp-proxy">
+    <Basepaths>/gemini-sdp-proxy</Basepaths>
+    <ConfigurationVersion majorVersion="4" minorVersion="0"/>
+    <DisplayName>gemini-sdp-proxy</DisplayName>
+    <Description>AI Gateway: API key + spike arrest + LLM token quota, per-part fail-closed Sensitive Data Protection de-identification (v2 templates) for inbound prompts and outbound model responses, per-stage timing, gated sanitized X-ray debug view, Cloud Logging audit trail, Vertex AI Gemini-3.5-Flash-Lite (global endpoint)</Description>
+    <Policies>
+        <Policy>VA-Verify-API-Key</Policy>
+        <Policy>SA-Spike-Arrest</Policy>
+        <Policy>LTQ-Enforce-Tokens</Policy>
+        <Policy>LTQ-Count-Tokens</Policy>
+        <Policy>JS-SDP-Prepare-Inbound</Policy>
+        <Policy>JS-SDP-Apply-Inbound</Policy>
+        <Policy>JS-SDP-Prepare-Outbound</Policy>
+        <Policy>JS-SDP-Apply-Outbound</Policy>
+        <Policy>JS-SDP-Finalize-Response</Policy>
+        <Policy>SC-SDP-Deidentify-Inbound</Policy>
+        <Policy>SC-SDP-Deidentify-Outbound</Policy>
+        <Policy>RF-SDP-Bypass-Forbidden</Policy>
+        <Policy>RF-SDP-Unavailable</Policy>
+        <Policy>ML-Log-SDP-Inbound</Policy>
+        <Policy>ML-Log-SDP-Outbound</Policy>
+        <Policy>ML-Log-SDP-Error</Policy>
+        <Policy>AM-Prepare-Gemini-Request</Policy>
+        <Policy>AM-Set-Target-URL</Policy>
+        <Policy>AM-Set-SDP-Response-Headers</Policy>
+        <Policy>JS-Build-Error-Response</Policy>
+        <Policy>AM-Set-Error-Response</Policy>
+    </Policies>
+    <ProxyEndpoints>
+        <ProxyEndpoint>default</ProxyEndpoint>
+    </ProxyEndpoints>
+    <Resources>
+        <Resource>jsc://sdp-common.js</Resource>
+        <Resource>jsc://SDP-Prepare-Inbound.js</Resource>
+        <Resource>jsc://SDP-Apply-Inbound.js</Resource>
+        <Resource>jsc://SDP-Prepare-Outbound.js</Resource>
+        <Resource>jsc://SDP-Apply-Outbound.js</Resource>
+        <Resource>jsc://SDP-Finalize-Response.js</Resource>
+        <Resource>jsc://Build-Error-Response.js</Resource>
+        <Resource>properties://sdp.properties</Resource>
+    </Resources>
+    <TargetEndpoints>
+        <TargetEndpoint>default</TargetEndpoint>
+    </TargetEndpoints>
+</APIProxy>

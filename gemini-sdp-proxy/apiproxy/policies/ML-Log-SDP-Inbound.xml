@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<MessageLogging continueOnError="true" enabled="true" name="ML-Log-SDP-Inbound">
+    <DisplayName>Log SDP Inbound Audit Event to Cloud Logging</DisplayName>
+    <CloudLogging>
+        <LogName>projects/{organization.name}/logs/apigee-sdp-logs</LogName>
+        <!-- Entry is built with JSON.stringify in JS so user text can never break the JSON. -->
+        <Message contentType="application/json">{sdp.inbound.log}</Message>
+        <Labels>
+            <Label>
+                <Key>proxy</Key>
+                <Value>{apiproxy.name}</Value>
+            </Label>
+            <Label>
+                <Key>environment</Key>
+                <Value>{environment.name}</Value>
+            </Label>
+            <Label>
+                <Key>direction</Key>
+                <Value>inbound</Value>
+            </Label>
+            <Label>
+                <Key>service</Key>
+                <Value>sensitive-data-protection</Value>
+            </Label>
+        </Labels>
+        <ResourceType>api</ResourceType>
+    </CloudLogging>
+</MessageLogging>

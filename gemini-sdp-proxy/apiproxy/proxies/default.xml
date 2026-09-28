@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ProxyEndpoint name="default">
+    <PreFlow name="PreFlow">
+        <Request>
+            <!-- 1. Consumer identity & abuse control -->
+            <Step>
+                <Name>VA-Verify-API-Key</Name>
+            </Step>
+            <Step>
+                <Name>SA-Spike-Arrest</Name>
+            </Step>
+            <Step>
+                <Name>LTQ-Enforce-Tokens</Name>
+            </Step>
+            <!-- 2. Inbound SDP: one deidentify call, every text part handled individually -->
+            <Step>
+                <Name>JS-SDP-Prepare-Inbound</Name>
+            </Step>
+            <Step>
+                <Condition>sdp.bypass.denied = "true"</Condition>
+                <Name>RF-SDP-Bypass-Forbidden</Name>
+            </Step>
+            <Step>
+                <Condition>sdp.error != "true" and sdp.inbound.enabled = "true" and sdp.inbound.has_text = "true"</Condition>
+                <Name>SC-SDP-Deidentify-Inbound</Name>
+            </Step>
+            <Step>
+                <Condition>sdp.error != "true" and sdp.inbound.enabled = "true" and sdp.inbound.has_text = "true"</Condition>
+                <Name>JS-SDP-Apply-Inbound</Name>
+            </Step>
+            <!-- Fail closed: never forward content SDP could not verify -->
+            <Step>
+                <Condition>sdp.error = "true"</Condition>
+                <Name>RF-SDP-Unavailable</Name>
+            </Step>
+            <Step>
+                <Name>ML-Log-SDP-Inbound</Name>
+            </Step>
+            <!-- 3. Clean headers for Vertex AI target -->
+            <Step>
+                <Name>AM-Prepare-Gemini-Request</Name>
+            </Step>
+        </Request>
+        <Response/>
+    </PreFlow>
+    <PostFlow name="PostFlow">
+        <Request/>
+        <Response>
+            <!-- Count real token usage first: tokens are consumed even if SDP later blocks the response -->
+            <Step>
+                <Name>LTQ-Count-Tokens</Name>
+            </Step>
+            <!-- Outbound SDP across all candidates and parts -->
+            <Step>
+                <Name>JS-SDP-Prepare-Outbound</Name>
+            </Step>
+            <Step>
+                <Condition>sdp.error != "true" and sdp.outbound.enabled = "true" and sdp.outbound.has_text = "true"</Condition>
+                <Name>SC-SDP-Deidentify-Outbound</Name>
+            </Step>
+            <Step>
+                <Condition>sdp.error != "true" and sdp.outbound.enabled = "true" and sdp.outbound.has_text = "true"</Condition>
+                <Name>JS-SDP-Apply-Outbound</Name>
+            </Step>
+            <Step>
+                <Condition>sdp.error = "true"</Condition>
+                <Name>RF-SDP-Unavailable</Name>
+            </Step>
+            <Step>
+                <Name>ML-Log-SDP-Outbound</Name>
+            </Step>
+            <!-- Per-stage timing header + optional sanitized X-ray (x-sdp-debug, gated by app attribute) -->
+            <Step>
+                <Name>JS-SDP-Finalize-Response</Name>
+            </Step>
+            <Step>
+                <Name>AM-Set-SDP-Response-Headers</Name>
+            </Step>
+        </Response>
+    </PostFlow>
+    <Flows/>
+    <HTTPProxyConnection>
+        <BasePath>/gemini-sdp-proxy</BasePath>
+    </HTTPProxyConnection>
+    <RouteRule name="default">
+        <TargetEndpoint>default</TargetEndpoint>
+    </RouteRule>
+    <DefaultFaultRule name="default-fault-handler">
+        <Step>
+            <Name>JS-Build-Error-Response</Name>
+        </Step>
+        <Step>
+            <Condition>sdperr.log != null</Condition>
+            <Name>ML-Log-SDP-Error</Name>
+        </Step>
+        <Step>
+            <Name>AM-Set-Error-Response</Name>
+        </Step>
+        <AlwaysEnforce>true</AlwaysEnforce>
+    </DefaultFaultRule>
+</ProxyEndpoint>
