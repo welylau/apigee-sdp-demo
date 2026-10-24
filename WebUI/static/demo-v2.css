@@ -301,3 +301,80 @@ mark.pii-raw.pii-leaked {
 #resultCard .xray-grid { gap: 8px; margin-top: 4px; }
 #resultCard .xray-head { padding: 5px 8px; font-size: 11.5px; }
 #resultCard .xray-body { padding: 7px 8px; font-size: 11px; line-height: 1.5; max-height: 300px; }
+
+/* ---------- Header external resource links (YouTube, GitHub, Other Demos) ---------- */
+.header-links {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.header-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 11px;
+  font: 600 12px/1 var(--font-sans);
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.header-link:hover {
+  color: var(--text-main);
+  background: var(--bg-card-hover);
+  border-color: var(--border-accent);
+}
+
+.header-link:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+.header-link-icon {
+  flex-shrink: 0;
+  display: block;
+}
+
+.header-link-youtube .yt-icon {
+  color: var(--google-red);
+}
+.header-link-youtube:hover {
+  color: var(--danger);
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+}
+
+.header-link-demos .demos-icon {
+  color: var(--apigee-orange);
+}
+.header-link-demos:hover {
+  color: var(--apigee-orange);
+  background: var(--apigee-subtle);
+  border-color: var(--apigee-border);
+}
+
+.header-link-ext {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: -2px;
+}
+.header-link-demos:hover .header-link-ext {
+  color: var(--apigee-orange);
+}
+
+@media (max-width: 1180px) {
+  .header-link {
+    padding: 6px 8px;
+  }
+  .header-link-label,
+  .header-link-ext {
+    display: none;
+  }
+}
+

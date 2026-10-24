@@ -207,6 +207,7 @@ curl -s -X POST "https://<your-apigee-host>/gemini-sdp-proxy" \
 * **Guided Tour**: 6 short missions (architecture, zero false positives, inbound masking, outbound catch, bypass governance, audit). Open it from the header, or deep-link with `?tour=<missionId>`.
 * **Security Audit & Logs drawer**: syncs with Cloud Logging (`apigee-sdp-logs`), with KPI cards and filters.
 * **Dual theme** (light and dark) and a resizable splitter.
+* **Header links**: the [YouTube walkthrough](https://www.youtube.com/watch?v=LCxFRA9sKw0), this GitHub repo, and the hub of other Apigee demos, all opening in a new tab.
 * **BFF pattern**: the API key stays in the Python process and never reaches the browser. Raw prompts are never persisted; the local audit store keeps sanitized text only. Locally the server binds to `127.0.0.1`; on Cloud Run it sits behind IAP and reads the key from Secret Manager. Python 3 standard library only (`ThreadingHTTPServer`), no pip dependencies.
 
 ---
