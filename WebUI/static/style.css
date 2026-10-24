@@ -22,6 +22,8 @@
   --google-blue: #1a73e8;
   --google-blue-hover: #1557b0;
   --google-blue-subtle: #e8f0fe;
+  --google-blue-border: rgba(26, 115, 232, 0.3);
+  --diagram-bg: #ffffff;
   --google-red: #ea4335;
   --google-yellow: #fbbc04;
   --google-green: #34a853;
@@ -81,6 +83,8 @@
   --border-focus: #3b82f6;
 
   --google-blue-subtle: rgba(59, 130, 246, 0.15);
+  --google-blue-border: rgba(59, 130, 246, 0.35);
+  --diagram-bg: #f8fafc;
   --apigee-subtle: rgba(240, 77, 35, 0.12);
   --apigee-border: rgba(240, 77, 35, 0.35);
 
@@ -903,7 +907,7 @@ html, body {
   border-radius: var(--radius-sm);
   padding: 10px 12px;
   resize: vertical;
-  min-height: 135px;
+  min-height: 96px;
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
@@ -1070,7 +1074,7 @@ html, body {
 }
 
 /* Enhanced sizing for SSE elements occupying wide screen */
-#cardMain .output-body,
+#resultCard .output-body,
 #cardStream .output-body {
   min-height: 240px;
   max-height: 480px;
@@ -1169,7 +1173,7 @@ html, body {
 /* Metrics Bar */
 .metrics-bar {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 6px;
   background: var(--bg-tertiary);
   border: 1px solid var(--border-subtle);
@@ -1546,6 +1550,25 @@ html, body {
    Admin Analytics & Security Audit Panel Styles
    ========================================================================== */
 
+.header-tour-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font: 600 12px var(--font-sans);
+  color: var(--google-blue);
+  background: var(--google-blue-subtle);
+  border: 1px solid var(--google-blue-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.header-tour-btn:hover,
+.header-tour-btn:focus-visible {
+  border-color: var(--google-blue);
+}
+
 .admin-nav-btn {
   display: inline-flex;
   align-items: center;
@@ -1584,8 +1607,15 @@ html, body {
   align-items: center;
   gap: 8px;
   cursor: pointer;
+  font: inherit;
+  color: inherit;
   box-shadow: -4px 6px 18px rgba(0, 0, 0, 0.15);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.floating-admin-trigger:focus-visible {
+  outline: 2px solid var(--google-blue);
+  outline-offset: 2px;
 }
 
 .floating-admin-trigger:hover {
@@ -2589,6 +2619,8 @@ html, body {
 
 .arch-modal-body {
   padding: 18px 20px;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   background: var(--bg-tertiary);
   display: flex;
@@ -2597,36 +2629,36 @@ html, body {
 }
 
 .arch-diagram-wrapper {
-  background: #ffffff;
+  /* The diagram is rendered on white, so the frame stays light in both themes. */
+  background: var(--diagram-bg);
   border: 1.5px solid var(--border-subtle);
   border-radius: var(--radius-md);
   padding: 8px;
   box-shadow: var(--shadow-sm);
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  display: block;
+  flex: 0 0 auto;
+  cursor: zoom-in;
+}
+
+.arch-diagram-wrapper:focus-visible {
+  outline: 2px solid var(--google-blue);
+  outline-offset: 2px;
 }
 
 .arch-modal-img {
-  max-width: 100%;
-  max-height: 48vh;
-  width: auto;
-  height: auto;
-  border-radius: var(--radius-sm);
   display: block;
+  width: 100%;
+  height: auto;
+  max-height: 62vh;
   object-fit: contain;
+  border-radius: var(--radius-sm);
 }
 
 .arch-steps-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
-}
-
-@media (max-width: 960px) {
-  .arch-steps-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  flex: 0 0 auto;
 }
 
 .arch-step-card {

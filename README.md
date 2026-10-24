@@ -73,49 +73,22 @@ Employees and customer-facing apps paste NRICs, card numbers, bank accounts, med
 ## 🏛️ High-Level Architecture
 
 <p align="center">
-  <img src="WebUI/static/assets/architecture-diagram.png" alt="Web UI calls Apigee X gemini-sdp-proxy. Request lane: VerifyAPIKey, SpikeArrest, LLMTokenQuota, prepare inbound, SDP de-identify inbound in asia-southeast1, apply, fail closed, audit log. Target: Vertex AI global Gemini 3.5 Flash-Lite. Response lane: count tokens, SDP de-identify outbound, apply, fail closed, audit log, finalize with X-SDP headers. Audit entries go to Cloud Logging apigee-sdp-logs." width="100%">
+  <img src="docs/architecture.png" alt="Your app sends a prompt to the Apigee X AI Gateway, which (1) verifies the app, (2) masks the prompt with Sensitive Data Protection, sends only tokens to Gemini on Vertex AI, and (3) masks the answer with Sensitive Data Protection before returning it. Every request writes a sanitized audit entry to Cloud Logging. Outcomes: 200 clean or masked, 403 bypass not allowed, 502 SDP unavailable so fail closed." width="100%">
 </p>
 
 <sub>Source: <a href="docs/architecture-diagram.html">docs/architecture-diagram.html</a>, rendered with <a href="docs/render-architecture.sh">docs/render-architecture.sh</a> (headless Chrome)</sub>
 
 ### Request flow inside the proxy
 
-```mermaid
-flowchart LR
-    C([Client]) --> VA[VA-Verify-API-Key] --> SA[SA-Spike-Arrest] --> LTQ[LTQ-Enforce-Tokens]
-    LTQ --> PI[JS-SDP-Prepare-Inbound]
-    PI -- "bypass requested, app not allowed" --> F403[/403 PERMISSION_DENIED/]
-    PI --> SCI[SC-SDP-Deidentify-Inbound<br/>DLP content:deidentify]
-    SCI --> AI[JS-SDP-Apply-Inbound]
-    AI -- "DLP failed" --> F502[/502 SDP_UNAVAILABLE/]
-    AI --> MLI[ML-Log-SDP-Inbound] --> G[Vertex AI global<br/>gemini-3.5-flash-lite]
-    G --> CT[LTQ-Count-Tokens] --> SCO[SC-SDP-Deidentify-Outbound] --> AO[JS-SDP-Apply-Outbound]
-    AO -- "DLP failed" --> F502
-    AO --> MLO[ML-Log-SDP-Outbound] --> FIN[JS-SDP-Finalize-Response<br/>X-SDP-* headers, optional sdpAudit] --> C2([Client])
-```
+<p align="center">
+  <img src="docs/diagrams/policy-flow.png" alt="Request flow inside the proxy" width="100%">
+</p>
 
 ### End-to-end sequence
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant U as User (Web UI)
-    participant A as Apigee X (gemini-sdp-proxy)
-    participant D as Sensitive Data Protection (asia-southeast1)
-    participant V as Vertex AI Gemini (global)
-    participant L as Cloud Logging
-    U->>A: POST prompt with NRIC, card, email (x-api-key)
-    A->>A: VerifyAPIKey, SpikeArrest, LLMTokenQuota
-    A->>D: content:deidentify (all parts, one call)
-    D-->>A: [SINGAPORE_NATIONAL_REGISTRATION_ID_NUMBER], [CREDIT_CARD_NUMBER] …
-    A->>L: inbound audit entry (sanitized)
-    A->>V: generateContent with masked prompt
-    V-->>A: answer (may contain generated PII)
-    A->>D: content:deidentify (all candidates, one call)
-    D-->>A: sanitized answer
-    A->>L: outbound audit entry (tokens, latency, findings)
-    A-->>U: sanitized answer + X-SDP-* headers
-```
+<p align="center">
+  <img src="docs/diagrams/request-sequence.png" alt="End-to-end sequence" width="100%">
+</p>
 
 ---
 
@@ -227,11 +200,11 @@ curl -s -X POST "https://<your-apigee-host>/gemini-sdp-proxy" \
 
 ### UI Capabilities & Highlights
 
-* **Test Prompt Library (14 presets)**: baseline (no false positives), banking (refund, transfer with IBAN/SWIFT, spaced card + CVV), identity (FIN + passport, bare NRIC), clinic note, HR offer, developer secrets, Chinese and Malay prompts, and two outbound stories. Business presets carry an assistant persona (sent as `systemInstruction` and inspected too) so Gemini completes the task on masked data. Every preset has a **self-test** badge for its expected infoTypes.
+* **Test Prompt Library (8 presets)**: a clean baseline (no false positives); inbound masking (refund with name/NRIC/card/email, transfer with IBAN/SWIFT, bare NRIC caught by a custom detector, clinic note, developer API key + password); and two outbound stories (fragments reassembled by the model, model-invented customer). Business presets carry an assistant persona (sent as `systemInstruction` and inspected too) so Gemini completes the task on masked data. Every preset has a **self-test** badge for its expected infoTypes. Type your own prompt (any language) in the editor below.
 * **Live pipeline**: Client → Apigee → SDP In → Gemini → SDP Out → Client, with per-hop timings and a latency bar showing SDP's share.
 * **SDP X-ray**: three columns: what you typed (PII highlighted), what Gemini actually saw (with system/user roles) and what outbound SDP caught, plus a Cloud Logging deep link per request.
 * **Compare OFF vs ON**: runs the same prompt twice in parallel and shows the unprotected and protected result side by side.
-* **Present mode**: a 6-step guided story (← → to navigate, Enter runs, Esc exits).
+* **Guided Tour**: 6 short missions (architecture, zero false positives, inbound masking, outbound catch, bypass governance, audit). Open it from the header, or deep-link with `?tour=<missionId>`.
 * **Security Audit & Logs drawer**: syncs with Cloud Logging (`apigee-sdp-logs`), with KPI cards and filters.
 * **Dual theme** (light and dark) and a resizable splitter.
 * **BFF pattern**: the API key stays in the Python process and never reaches the browser. Raw prompts are never persisted; the local audit store keeps sanitized text only. Locally the server binds to `127.0.0.1`; on Cloud Run it sits behind IAP and reads the key from Secret Manager. Python 3 standard library only (`ThreadingHTTPServer`), no pip dependencies.

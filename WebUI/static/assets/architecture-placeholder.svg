@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" width="1200" height="420" role="img" aria-label="Architecture placeholder: Client to Apigee X to Backend">
+  <rect width="1200" height="420" rx="16" fill="#f8fafc" stroke="#cbd5e1" stroke-dasharray="8 6"/>
+  <g font-family="Plus Jakarta Sans, Segoe UI, Arial, sans-serif" text-anchor="middle">
+    <rect x="80" y="150" width="220" height="120" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+    <text x="190" y="205" font-size="22" font-weight="700" fill="#0f172a">Client / Web UI</text>
+    <text x="190" y="235" font-size="15" fill="#64748b">BFF holds secrets</text>
+
+    <rect x="490" y="130" width="220" height="160" rx="14" fill="#e8f0fe" stroke="#1a73e8" stroke-width="2"/>
+    <text x="600" y="195" font-size="24" font-weight="800" fill="#1a73e8">Apigee X</text>
+    <text x="600" y="225" font-size="15" fill="#334155">Key · Quota · Policies</text>
+    <text x="600" y="250" font-size="15" fill="#334155">Analytics &amp; Logging</text>
+
+    <rect x="900" y="150" width="220" height="120" rx="14" fill="#fef3f0" stroke="#f04d23" stroke-width="2"/>
+    <text x="1010" y="205" font-size="22" font-weight="700" fill="#f04d23">Backend / LLM</text>
+    <text x="1010" y="235" font-size="15" fill="#64748b">Vertex AI · API</text>
+
+    <path d="M300 210 H480" stroke="#64748b" stroke-width="3" marker-end="url(#a)"/>
+    <path d="M710 210 H890" stroke="#64748b" stroke-width="3" marker-end="url(#a)"/>
+    <text x="600" y="370" font-size="16" fill="#94a3b8">Placeholder: copy docs/architecture.png to static/assets/architecture.png</text>
+  </g>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#64748b"/>
+    </marker>
+  </defs>
+</svg>

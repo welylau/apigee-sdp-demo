@@ -1,13 +1,39 @@
 /**
  * Apigee X + Sensitive Data Protection (Cloud DLP) Demonstration Client
- * Google Cloud Minimalist Enterprise Design System & Live Telemetry Inspector
+ * House style: apigee-demo-ui (vanilla JS, DOM APIs only, no innerHTML).
  *
  * Views:
  *   - Pipeline: live request path with real per-stage latency (X-SDP-Timing header)
  *   - SDP X-ray: what you typed -> what Gemini saw (sanitized, from the gateway) -> outbound SDP
  *   - Compare: the same prompt with SDP OFF vs ON (demo app only: sdp_bypass_allowed=true)
- *   - Present: guided, keyboard-driven demo storyline
+ *
+ * Integration contract (used by tour/tour-engine.js; this file never depends on tour/):
+ *   window.demoApp             facade (see bottom of file)
+ *   window 'demo:ready'        facade available
+ *   window 'demo:configloaded' /api/config applied
+ *   window 'demo:runresult'    detail = { ok, httpStatus, latencyMs, tokens, verdict, response,
+ *                                         requestHeaders, responseHeaders, scenarioId, mode, sdp }
+ *   window 'demo:themechange'  detail { theme }
+ *   window 'demo:archopen'
+ * Scenario chips carry data-scenario="<id>". Run button #runBtn, result card #resultCard.
  */
+
+const DEMO_SLUG = "apigee-sdp-demo";
+const storageKey = (k) => `${DEMO_SLUG}.${k}`;
+const store = {
+    get(k) { try { return localStorage.getItem(storageKey(k)); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(storageKey(k), String(v)); } catch (e) { /* storage unavailable */ } }
+};
+
+// Theme is applied before first paint (this script is loaded in <head>).
+(function applySavedTheme() {
+    let saved = store.get("theme");
+    if (!saved) {
+        try { saved = localStorage.getItem("apigee_sdp_theme"); } catch (e) { saved = null; } // legacy key
+        if (saved) store.set("theme", saved);
+    }
+    document.documentElement.setAttribute("data-theme", saved === "dark" ? "dark" : "light");
+})();
 
 document.addEventListener("DOMContentLoaded", () => {
     // --- State ---
@@ -16,6 +42,10 @@ document.addEventListener("DOMContentLoaded", () => {
     let busy = false;
     let pipelineTimer = null;
     let activePreset = null;
+    let lastResult = null;
+    let archOpener = null;
+    let adminOpener = null;
+    let logOpener = null;
     let config = {
         proxyUrl: "https://YOUR_APIGEE_IP.nip.io/gemini-sdp-proxy",
         project: "YOUR_GCP_PROJECT_ID",
@@ -28,6 +58,34 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const $ = (id) => document.getElementById(id);
+    const emit = (name, detail) => window.dispatchEvent(new CustomEvent(name, { detail }));
+
+    // =========================================================================
+    // 0. DOM helpers (no innerHTML anywhere in this file)
+    // =========================================================================
+    function flatKids(kids) {
+        return kids.flat(Infinity)
+            .filter(k => k !== null && k !== undefined && k !== false)
+            .map(k => (k instanceof Node ? k : document.createTextNode(String(k))));
+    }
+
+    /** h("span", {class, text, style, title, "data-x": ..., onClick}, ...children) */
+    function h(tag, props, ...kids) {
+        const node = document.createElement(tag);
+        Object.entries(props || {}).forEach(([k, v]) => {
+            if (v === null || v === undefined || v === false) return;
+            if (k === "class") node.className = v;
+            else if (k === "text") node.textContent = String(v);
+            else if (k === "style") node.style.cssText = v;
+            else if (k === "onClick") node.addEventListener("click", v);
+            else node.setAttribute(k, String(v));
+        });
+        node.append(...flatKids(kids));
+        return node;
+    }
+
+    const fill = (node, ...kids) => { if (node) node.replaceChildren(...flatKids(kids)); };
+    const note = (text, cls = "xray-empty") => h("span", { class: cls }, text);
 
     // Friendly names for DLP infoTypes (legend + token tooltips).
     const INFO_TYPE_LABELS = {
@@ -91,11 +149,10 @@ document.addEventListener("DOMContentLoaded", () => {
     // Prompt & execution elements
     const promptInput = $("promptInput");
     const systemInput = $("systemInput");
-    const systemDetails = $("systemDetails");
     const systemBadge = $("systemBadge");
     const charBadge = $("charBadge");
     const clearBtn = $("clearBtn");
-    const sendBtn = $("sendBtn");
+    const runBtn = $("runBtn");
     const compareBtn = $("compareBtn");
     const btnSpinner = $("btnSpinner");
     const btnOpenAdminFromLeft = $("btnOpenAdminFromLeft");
@@ -132,8 +189,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const compareCard = $("compareCard");
 
     // Admin Drawer elements
-    const btnScrollToAdmin = $("btnScrollToAdmin");
-    const floatingAdminTrigger = $("floatingAdminTrigger");
+    const btnOpenAdmin = $("btnOpenAdmin");
+    const adminTab = $("adminTab");
     const adminDrawer = $("adminDrawer");
     const adminDrawerBackdrop = $("adminDrawerBackdrop");
     const btnCloseAdminDrawer = $("btnCloseAdminDrawer");
@@ -155,8 +212,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Modals
     const archModal = $("archModal");
-    const btnViewArch = $("btnViewArch");
-    const btnCloseArchModal = $("btnCloseArchModal");
+    const viewArchBtn = $("viewArchBtn");
+    const archModalCloseBtn = $("archModalCloseBtn");
 
     const logDetailModal = $("logDetailModal");
     const modalCloseBtn = $("modalCloseBtn");
@@ -167,24 +224,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const modalLogsLink = $("modalLogsLink");
 
     // =========================================================================
-    // 0. Utilities: escaping, toasts, config, Cloud Logging links
+    // 1. Utilities: toasts, config, Cloud Logging links
     // =========================================================================
-    function escapeHtml(text) {
-        if (text === null || text === undefined) return "";
-        return String(text)
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
-    }
-
     function toast(message, kind = "info") {
         const container = $("toastContainer");
         if (!container) return;
-        const el = document.createElement("div");
-        el.className = `toast toast-${kind}`;
-        el.textContent = message;
+        const el = h("div", { class: `toast toast-${kind}` }, message);
         container.appendChild(el);
         setTimeout(() => el.classList.add("toast-hide"), 3200);
         setTimeout(() => el.remove(), 3700);
@@ -205,8 +250,7 @@ document.addEventListener("DOMContentLoaded", () => {
     async function loadConfig() {
         try {
             const res = await fetch("/api/config");
-            if (!res.ok) return;
-            config = Object.assign(config, await res.json());
+            if (res.ok) config = Object.assign(config, await res.json());
         } catch (e) {
             console.warn("Using default config", e);
         }
@@ -224,38 +268,50 @@ document.addEventListener("DOMContentLoaded", () => {
         if (config.apiKeyConfigured === false) {
             toast("APIGEE_API_KEY is not configured: run ./setup-apigee-resources.sh", "error");
         }
+        emit("demo:configloaded", { apiKeyConfigured: config.apiKeyConfigured });
     }
 
     // =========================================================================
-    // 1. Theme Management (Light & Modern Dark)
+    // 2. Theme (light default; persisted as '<slug>.theme')
     // =========================================================================
-    function initTheme() {
-        const savedTheme = localStorage.getItem("apigee_sdp_theme") || "light";
-        applyTheme(savedTheme);
+    function applyTheme(theme) {
+        const t = theme === "dark" ? "dark" : "light";
+        document.documentElement.setAttribute("data-theme", t);
+        if (themeIconSun && themeIconMoon) {
+            themeIconSun.style.display = t === "dark" ? "none" : "block";
+            themeIconMoon.style.display = t === "dark" ? "block" : "none";
+        }
+        return t;
+    }
 
+    function setTheme(theme) {
+        const t = applyTheme(theme);
+        store.set("theme", t);
+        emit("demo:themechange", { theme: t });
+    }
+
+    function initTheme() {
+        applyTheme(document.documentElement.getAttribute("data-theme"));
         if (themeToggleBtn) {
             themeToggleBtn.addEventListener("click", () => {
                 const current = document.documentElement.getAttribute("data-theme") || "light";
-                const next = current === "light" ? "dark" : "light";
-                applyTheme(next);
-                localStorage.setItem("apigee_sdp_theme", next);
+                setTheme(current === "light" ? "dark" : "light");
             });
         }
     }
 
-    function applyTheme(theme) {
-        document.documentElement.setAttribute("data-theme", theme);
-        if (themeIconSun && themeIconMoon) {
-            themeIconSun.style.display = theme === "dark" ? "none" : "block";
-            themeIconMoon.style.display = theme === "dark" ? "block" : "none";
-        }
-    }
-
     // =========================================================================
-    // 2. Resizable Splitter Logic
+    // 3. Resizable splitter (mouse + keyboard)
     // =========================================================================
     function initSplitter() {
         if (!splitter || !leftPanel || !workspaceLayout) return;
+        const MIN = 340, MAX = 750;
+        const clamp = (w) => Math.max(MIN, Math.min(MAX, w));
+
+        splitter.setAttribute("role", "separator");
+        splitter.setAttribute("aria-orientation", "vertical");
+        splitter.setAttribute("aria-label", "Resize panels");
+        splitter.tabIndex = 0;
 
         let isDragging = false;
         splitter.addEventListener("mousedown", (e) => {
@@ -268,30 +324,33 @@ document.addEventListener("DOMContentLoaded", () => {
             function onMouseMove(moveEvent) {
                 if (!isDragging) return;
                 const rect = workspaceLayout.getBoundingClientRect();
-                let newWidth = moveEvent.clientX - rect.left;
-                if (newWidth < 340) newWidth = 340;
-                if (newWidth > 750) newWidth = 750;
-                leftPanel.style.width = `${newWidth}px`;
+                leftPanel.style.width = `${clamp(moveEvent.clientX - rect.left)}px`;
             }
 
             function onMouseUp() {
-                if (isDragging) {
-                    isDragging = false;
-                    splitter.classList.remove("active");
-                    document.body.style.cursor = "";
-                    document.body.style.userSelect = "";
-                    window.removeEventListener("mousemove", onMouseMove);
-                    window.removeEventListener("mouseup", onMouseUp);
-                }
+                if (!isDragging) return;
+                isDragging = false;
+                splitter.classList.remove("active");
+                document.body.style.cursor = "";
+                document.body.style.userSelect = "";
+                window.removeEventListener("mousemove", onMouseMove);
+                window.removeEventListener("mouseup", onMouseUp);
             }
 
             window.addEventListener("mousemove", onMouseMove);
             window.addEventListener("mouseup", onMouseUp);
         });
+
+        splitter.addEventListener("keydown", (e) => {
+            const width = leftPanel.getBoundingClientRect().width;
+            if (e.key === "ArrowLeft") { e.preventDefault(); leftPanel.style.width = `${clamp(width - 24)}px`; }
+            else if (e.key === "ArrowRight") { e.preventDefault(); leftPanel.style.width = `${clamp(width + 24)}px`; }
+            else if (e.key === "Home") { e.preventDefault(); leftPanel.style.width = ""; }
+        });
     }
 
     // =========================================================================
-    // 3. Policies, Presets, System Instruction & Prompt Editor
+    // 4. Policies, presets, system instruction & prompt editor
     // =========================================================================
     function pulseSwitch(switchEl) {
         if (!switchEl) return;
@@ -347,7 +406,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function showScenario(pill) {
-        const title = pill.getAttribute("data-scenario");
+        const title = pill.getAttribute("data-title");
         if (!title) { scenarioCallout.style.display = "none"; return; }
         const expect = parseExpect(pill.getAttribute("data-expect"));
         const dir = pill.getAttribute("data-expect-dir");
@@ -376,6 +435,10 @@ document.addEventListener("DOMContentLoaded", () => {
         // Presets always demonstrate the protected path; use Compare to show SDP OFF.
         setPolicies(true, true);
         showScenario(pill);
+    }
+
+    function presetById(id) {
+        return [...document.querySelectorAll(".preset-pill[data-scenario]")].find(p => p.dataset.scenario === id) || null;
     }
 
     function clearPresetSelection() {
@@ -429,17 +492,24 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // =========================================================================
-    // 4. Token highlighting & raw-vs-sanitized alignment (X-ray)
+    // 5. Token highlighting & raw-vs-sanitized alignment (X-ray)
     // =========================================================================
     const TOKEN_RE = /\[([A-Z0-9_]{3,})\]/g;
 
     /** Highlights [INFO_TYPE] tokens. Tokens whose type is in `caughtOut` are marked as outbound catches. */
-    function highlightTokens(text, caughtOut) {
-        if (!text) return "";
-        return escapeHtml(text).replace(/\[([A-Z0-9_]{3,})\]/g, (m, type) => {
-            const cls = caughtOut && caughtOut.has(type) ? "deidentified-token token-caught-out" : "deidentified-token";
-            return `<span class="${cls}" title="${escapeHtml(labelFor(type))}">${m}</span>`;
-        });
+    function tokenFragment(text, caughtOut) {
+        const frag = document.createDocumentFragment();
+        if (!text) return frag;
+        const re = /\[([A-Z0-9_]{3,})\]/g;
+        let last = 0, m;
+        while ((m = re.exec(text)) !== null) {
+            if (m.index > last) frag.append(text.slice(last, m.index));
+            const cls = caughtOut && caughtOut.has(m[1]) ? "deidentified-token token-caught-out" : "deidentified-token";
+            frag.append(h("span", { class: cls, title: labelFor(m[1]) }, m[0]));
+            last = re.lastIndex;
+        }
+        if (last < text.length) frag.append(text.slice(last));
+        return frag;
     }
 
     /**
@@ -481,24 +551,41 @@ document.addEventListener("DOMContentLoaded", () => {
         return spans;
     }
 
-    function renderRawWithRedactions(raw, spans, variant) {
-        if (!spans || !spans.length) return escapeHtml(raw);
-        let html = "", pos = 0;
+    function rawWithRedactions(raw, spans, variant) {
+        const frag = document.createDocumentFragment();
+        if (!spans || !spans.length) { frag.append(raw); return frag; }
+        let pos = 0;
         spans.forEach((s, i) => {
-            html += escapeHtml(raw.slice(pos, s.start));
-            const label = s.types.map(labelFor).join(" + ");
-            html += `<mark class="pii-raw ${variant || ""}" style="animation-delay:${0.15 + i * 0.18}s" ` +
-                `title="${escapeHtml(label)}">${escapeHtml(raw.slice(s.start, s.end))}</mark>`;
+            frag.append(raw.slice(pos, s.start));
+            frag.append(h("mark", {
+                class: `pii-raw ${variant || ""}`.trim(),
+                style: `animation-delay:${0.15 + i * 0.18}s`,
+                title: s.types.map(labelFor).join(" + ")
+            }, raw.slice(s.start, s.end)));
             pos = s.end;
         });
-        return html + escapeHtml(raw.slice(pos));
+        frag.append(raw.slice(pos));
+        return frag;
+    }
+
+    /** Marks every occurrence of the given raw values (used for the unprotected compare pane). */
+    function markValues(text, values) {
+        const frag = document.createDocumentFragment();
+        const vals = [...new Set(values)].sort((a, b) => b.length - a.length);
+        if (!text || !vals.length) { frag.append(text || ""); return frag; }
+        const re = new RegExp(vals.map(v => v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "g");
+        let last = 0, m;
+        while ((m = re.exec(text)) !== null) {
+            frag.append(text.slice(last, m.index), h("mark", { class: "pii-raw pii-leaked" }, m[0]));
+            last = re.lastIndex;
+        }
+        frag.append(text.slice(last));
+        return frag;
     }
 
     function renderLegend(types) {
-        if (!types.length) { xrayLegend.innerHTML = ""; return; }
-        xrayLegend.innerHTML = types.map(t =>
-            `<span class="legend-chip" title="${escapeHtml(t)}"><code>[${escapeHtml(t)}]</code> ${escapeHtml(labelFor(t))}</span>`
-        ).join("");
+        fill(xrayLegend, types.map(t =>
+            h("span", { class: "legend-chip", title: t }, h("code", null, `[${t}]`), ` ${labelFor(t)}`)));
     }
 
     function evaluateSelfTest(detectedTypes) {
@@ -520,7 +607,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // =========================================================================
-    // 5. Pipeline animation & latency breakdown
+    // 6. Pipeline animation & latency breakdown
     // =========================================================================
     const STAGES = ["client", "gateway", "sdp_in", "model", "sdp_out", "done"];
 
@@ -531,9 +618,9 @@ document.addEventListener("DOMContentLoaded", () => {
     function resetPipeline() {
         clearInterval(pipelineTimer);
         pipeNodes().forEach(n => { n.className = "pipe-node"; });
-        pipeline.querySelectorAll(".pipe-ms").forEach(el => { el.innerHTML = "&nbsp;"; });
+        pipeline.querySelectorAll(".pipe-ms").forEach(el => { el.textContent = "\u00a0"; });
         pipeline.querySelectorAll("[data-count]").forEach(el => { el.textContent = "de-identify"; el.classList.remove("has-findings"); });
-        latencyBar.innerHTML = "";
+        fill(latencyBar);
     }
 
     function animatePipeline(policies) {
@@ -563,8 +650,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const t = data.timing || {};
         const inb = data.inbound || {};
         const outb = data.outbound || {};
-        const nodes = pipeNodes();
-        nodes.forEach((n, i) => {
+        pipeNodes().forEach((n, i) => {
             n.className = "pipe-node is-done";
             const stage = STAGES[i];
             if (stage === "sdp_in" && inb.policyEnabled === false) n.className = "pipe-node is-skipped";
@@ -594,17 +680,19 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function renderLatencyBar(t, network, elapsed) {
-        if (!t.total || !elapsed) { latencyBar.innerHTML = ""; return; }
+        if (!t.total || !elapsed) { fill(latencyBar); return; }
         const other = Math.max(0, t.total - (t.gateway || 0) - (t.dlp_in || 0) - (t.model || 0) - (t.dlp_out || 0));
         const segs = [
             ["network", "Network", network], ["gateway", "Apigee policies", (t.gateway || 0) + other],
             ["sdp", "SDP inbound", t.dlp_in || 0], ["model", "Gemini", t.model || 0], ["sdp", "SDP outbound", t.dlp_out || 0]
         ].filter(s => s[2] > 0);
         const sdpShare = Math.round(((t.dlp_in || 0) + (t.dlp_out || 0)) / elapsed * 100);
-        latencyBar.innerHTML = `<div class="lat-track">` + segs.map(([cls, name, ms]) =>
-            `<div class="lat-seg lat-${cls}" style="flex:${ms}" title="${name}: ${ms} ms"></div>`).join("") +
-            `</div><div class="lat-caption">SDP (both directions) = <strong>${sdpShare}%</strong> of ${elapsed} ms end-to-end • ` +
-            `Gemini ${t.model || 0} ms</div>`;
+        fill(latencyBar,
+            h("div", { class: "lat-track" }, segs.map(([cls, name, ms]) =>
+                h("div", { class: `lat-seg lat-${cls}`, style: `flex:${Number(ms)}`, title: `${name}: ${ms} ms` }))),
+            h("div", { class: "lat-caption" },
+                "SDP (both directions) = ", h("strong", null, `${sdpShare}%`),
+                ` of ${elapsed} ms end-to-end • Gemini ${t.model || 0} ms`));
     }
 
     function failPipeline(stage) {
@@ -616,7 +704,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // =========================================================================
-    // 6. Execution (single run + compare)
+    // 7. Execution (single run + compare) and the demo:runresult contract
     // =========================================================================
     async function callGateway(prompt, systemInstruction, inbound, outbound) {
         const res = await fetch("/api/generate", {
@@ -633,6 +721,52 @@ document.addEventListener("DOMContentLoaded", () => {
         return data;
     }
 
+    function verdictOf(data) {
+        if (data.success !== false) return "allowed";
+        const code = data.status_code;
+        if ([400, 403, 429].includes(code) || data.error_status === "SDP_UNAVAILABLE") return "blocked";
+        return "error";
+    }
+
+    function sdpSide(info) {
+        info = info || {};
+        return {
+            enabled: info.policyEnabled !== false,
+            count: parseInt(info.findingsCount || "0", 10) || 0,
+            types: splitTypes(info.findingTypes)
+        };
+    }
+
+    /** Normalises a gateway result into the shared demo:runresult shape (+ SDP details). */
+    function toRunResult(data, mode) {
+        const usage = data.usage || {};
+        const ok = data.success !== false;
+        return {
+            ok,
+            httpStatus: data.status_code || (ok ? 200 : null),
+            latencyMs: data.elapsed_ms ?? null,
+            tokens: usage.totalTokenCount ? {
+                prompt: usage.promptTokenCount ?? null,
+                completion: usage.candidatesTokenCount ?? null,
+                total: usage.totalTokenCount
+            } : null,
+            verdict: verdictOf(data),
+            response: ok ? ((data.outbound || {}).modelResponseText || "") : `${data.error_status || "ERROR"}: ${data.error || ""}`,
+            requestHeaders: {},
+            responseHeaders: data.headers || {},
+            scenarioId: activePreset ? activePreset.dataset.scenario : null,
+            mode,
+            errorStatus: data.error_status || null,
+            sdp: { inbound: sdpSide(data.inbound), outbound: sdpSide(data.outbound) }
+        };
+    }
+
+    function publishResult(result) {
+        lastResult = result;
+        emit("demo:runresult", result);
+        return result;
+    }
+
     function readInputs() {
         const prompt = promptInput.value.trim();
         if (!prompt) {
@@ -647,7 +781,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function setBusy(on) {
         busy = on;
-        sendBtn.disabled = on;
+        runBtn.disabled = on;
         compareBtn.disabled = on;
         btnSpinner.style.display = on ? "inline-block" : "none";
     }
@@ -663,52 +797,55 @@ document.addEventListener("DOMContentLoaded", () => {
         metricInboundPII.textContent = policies.inbound ? "Scanning…" : "OFF";
         metricOutboundPII.textContent = policies.outbound ? "Waiting…" : "OFF";
         metricTokens.textContent = "…";
-        modelOutputBox.innerHTML = '<span class="placeholder-text"><span class="stream-cursor"></span> Waiting for Gemini via Apigee…</span>';
+        fill(modelOutputBox, h("span", { class: "placeholder-text" },
+            h("span", { class: "stream-cursor" }), " Waiting for Gemini via Apigee…"));
         tokenLeakIndicator.textContent = "EVALUATING";
         tokenLeakIndicator.className = "token-leak-indicator";
-        const pending = '<span class="xray-empty">…</span>';
-        xraySaw.innerHTML = pending;
-        xrayOut.innerHTML = pending;
+        fill(xraySaw, note("…"));
+        fill(xrayOut, note("…"));
         selfTest.textContent = "";
         logsLink.style.display = "none";
         animatePipeline(policies);
     }
 
     async function runSingle() {
-        if (busy) return;
+        if (busy) return null;
         const input = readInputs();
-        if (!input) return;
+        if (!input) return null;
         const policies = policyState();
         setBusy(true);
         compareCard.style.display = "none";
-        xrayTyped.innerHTML = escapeHtml(input.prompt);
+        fill(xrayTyped, input.prompt);
         showRunning(policies);
+        let data;
         try {
-            const data = await callGateway(input.prompt, input.systemInstruction, policies.inbound, policies.outbound);
+            data = await callGateway(input.prompt, input.systemInstruction, policies.inbound, policies.outbound);
             if (data.success === false) renderExecutionError(data);
             else renderExecutionResults(data, input);
             loadAuditLogs();
-            return data;
         } catch (err) {
-            renderExecutionError({ error_status: "CLIENT_ERROR", error: err.message || String(err) });
+            data = { success: false, error_status: "CLIENT_ERROR", error: err.message || String(err) };
+            renderExecutionError(data);
         } finally {
             setBusy(false);
         }
+        return publishResult(toRunResult(data, "single"));
     }
 
     async function runCompare() {
-        if (busy) return;
+        if (busy) return null;
         const input = readInputs();
-        if (!input) return;
+        if (!input) return null;
         setBusy(true);
         compareCard.style.display = "block";
-        ["cmpOffSaw", "cmpOffOut", "cmpOnSaw", "cmpOnOut"].forEach(id => { $(id).innerHTML = '<span class="xray-empty">…</span>'; });
+        ["cmpOffSaw", "cmpOffOut", "cmpOnSaw", "cmpOnOut"].forEach(id => fill($(id), note("…")));
         $("cmpOffMs").textContent = "…";
         $("cmpOnMs").textContent = "…";
-        xrayTyped.innerHTML = escapeHtml(input.prompt);
+        fill(xrayTyped, input.prompt);
         showRunning({ inbound: true, outbound: true });
+        let off, on;
         try {
-            const [off, on] = await Promise.all([
+            [off, on] = await Promise.all([
                 callGateway(input.prompt, input.systemInstruction, false, false),
                 callGateway(input.prompt, input.systemInstruction, true, true)
             ]);
@@ -717,10 +854,14 @@ document.addEventListener("DOMContentLoaded", () => {
             renderCompare(off, on, input);
             loadAuditLogs();
         } catch (err) {
-            renderExecutionError({ error_status: "CLIENT_ERROR", error: err.message || String(err) });
+            on = { success: false, error_status: "CLIENT_ERROR", error: err.message || String(err) };
+            renderExecutionError(on);
         } finally {
             setBusy(false);
         }
+        const result = toRunResult(on, "compare");
+        result.compareOff = off ? toRunResult(off, "compare-off") : null;
+        return publishResult(result);
     }
 
     function userSawText(data) {
@@ -729,32 +870,30 @@ document.addEventListener("DOMContentLoaded", () => {
         return parts.filter(p => p.role === "user").map(p => p.text).join("\n");
     }
 
+    const errorNote = (d) => note(`${d.error_status || "ERROR"}: ${d.error || ""}`, "xray-error");
+
     function renderCompare(off, on, input) {
         const onSaw = userSawText(on);
         const spans = findRedactions(input.prompt, onSaw);
         const rawValues = (spans || []).map(s => input.prompt.slice(s.start, s.end)).filter(v => v.length > 2);
 
         // Unprotected: Gemini got the raw prompt; highlight the values SDP would have removed.
-        $("cmpOffSaw").innerHTML = renderRawWithRedactions(input.prompt, spans, "pii-leaked");
+        fill($("cmpOffSaw"), rawWithRedactions(input.prompt, spans, "pii-leaked"));
         if (off.success === false) {
-            $("cmpOffOut").innerHTML = `<span class="xray-error">${escapeHtml(off.error_status)}: ${escapeHtml(off.error)}</span>`;
+            fill($("cmpOffOut"), errorNote(off));
         } else {
-            let html = escapeHtml((off.outbound || {}).modelResponseText || "");
-            rawValues.forEach(v => {
-                const esc = escapeHtml(v).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-                html = html.replace(new RegExp(esc, "g"), `<mark class="pii-raw pii-leaked">${escapeHtml(v)}</mark>`);
-            });
-            $("cmpOffOut").innerHTML = html || '<span class="xray-empty">(empty)</span>';
+            const text = (off.outbound || {}).modelResponseText || "";
+            fill($("cmpOffOut"), text ? markValues(text, rawValues) : note("(empty)"));
         }
         $("cmpOffMs").textContent = off.elapsed_ms ? `${off.elapsed_ms} ms` : "--";
 
         if (on.success === false) {
-            $("cmpOnSaw").innerHTML = `<span class="xray-error">${escapeHtml(on.error_status)}: ${escapeHtml(on.error)}</span>`;
-            $("cmpOnOut").innerHTML = "";
+            fill($("cmpOnSaw"), errorNote(on));
+            fill($("cmpOnOut"));
         } else {
             const outTypes = new Set(splitTypes((on.outbound || {}).findingTypes));
-            $("cmpOnSaw").innerHTML = highlightTokens(onSaw || input.prompt);
-            $("cmpOnOut").innerHTML = highlightTokens((on.outbound || {}).modelResponseText || "", outTypes);
+            fill($("cmpOnSaw"), tokenFragment(onSaw || input.prompt));
+            fill($("cmpOnOut"), tokenFragment((on.outbound || {}).modelResponseText || "", outTypes));
         }
         $("cmpOnMs").textContent = on.elapsed_ms ? `${on.elapsed_ms} ms` : "--";
         compareCard.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -816,8 +955,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Response box
         const outSet = new Set(outTypes);
-        const modelText = outbound.modelResponseText || "No response generated.";
-        modelOutputBox.innerHTML = highlightTokens(modelText, outSet);
+        fill(modelOutputBox, tokenFragment(outbound.modelResponseText || "No response generated.", outSet));
         if (!outboundEnabled) {
             tokenLeakIndicator.textContent = "UNINSPECTED (OFF)";
             tokenLeakIndicator.className = "token-leak-indicator leak-warn";
@@ -833,33 +971,38 @@ document.addEventListener("DOMContentLoaded", () => {
         const audit = data.sdp_audit || null;
         const sawParts = audit && audit.inbound ? audit.inbound.modelSawParts : null;
         if (!inboundEnabled) {
-            xrayTyped.innerHTML = escapeHtml(input.prompt);
-            xraySaw.innerHTML = `<div class="xray-alert">⚠️ Inbound SDP OFF: Gemini received the raw prompt.</div>` +
-                `<div class="xray-raw">${escapeHtml(input.prompt)}</div>`;
+            fill(xrayTyped, input.prompt);
+            fill(xraySaw,
+                h("div", { class: "xray-alert" }, "⚠️ Inbound SDP OFF: Gemini received the raw prompt."),
+                h("div", { class: "xray-raw" }, input.prompt));
         } else if (Array.isArray(sawParts)) {
             const userSaw = sawParts.filter(p => p.role === "user").map(p => p.text).join("\n");
-            const spans = findRedactions(input.prompt, userSaw);
-            xrayTyped.innerHTML = renderRawWithRedactions(input.prompt, spans);
-            xraySaw.innerHTML = sawParts.map(p =>
-                `<div class="xray-part"><span class="role-tag role-${escapeHtml(p.role)}">${escapeHtml(p.role)}</span>` +
-                `<div>${highlightTokens(p.text)}</div></div>`).join("");
+            fill(xrayTyped, rawWithRedactions(input.prompt, findRedactions(input.prompt, userSaw)));
+            fill(xraySaw, sawParts.map(p => {
+                const role = String(p.role || "").replace(/[^a-z]/gi, "");
+                return h("div", { class: "xray-part" },
+                    h("span", { class: `role-tag role-${role}` }, p.role),
+                    h("div", null, tokenFragment(p.text)));
+            }));
         } else {
-            xrayTyped.innerHTML = escapeHtml(input.prompt);
-            xraySaw.innerHTML = `<span class="xray-empty">X-ray unavailable (debug status: ${escapeHtml(data.debug_status || "off")}). ` +
-                `Findings: ${escapeHtml(inTypes.join(", ") || "none")}</span>`;
+            fill(xrayTyped, input.prompt);
+            fill(xraySaw, note(`X-ray unavailable (debug status: ${data.debug_status || "off"}). ` +
+                `Findings: ${inTypes.join(", ") || "none"}`));
         }
 
         // X-ray column 3: outbound
         if (!outboundEnabled) {
-            xrayOut.innerHTML = `<div class="xray-alert">⚠️ Outbound SDP OFF: the model response was returned without inspection.</div>`;
+            fill(xrayOut, h("div", { class: "xray-alert" }, "⚠️ Outbound SDP OFF: the model response was returned without inspection."));
         } else if (hasOutbound) {
-            xrayOut.innerHTML = `<div class="xray-caught">Caught on the way out:</div>` +
-                outTypes.map(t => `<span class="threat-tag" title="${escapeHtml(t)}">${escapeHtml(labelFor(t))}</span>`).join(" ") +
-                `<p class="xray-note">${escapeHtml(outbound.findingsCount)} value(s) generated or echoed by the model were ` +
-                `de-identified before the client received them (red tokens in the response).</p>`;
+            fill(xrayOut,
+                h("div", { class: "xray-caught" }, "Caught on the way out:"),
+                outTypes.map(t => [h("span", { class: "threat-tag", title: t }, labelFor(t)), " "]),
+                h("p", { class: "xray-note" }, `${outbound.findingsCount} value(s) generated or echoed by the model were ` +
+                    "de-identified before the client received them (red tokens in the response)."));
         } else {
-            xrayOut.innerHTML = `<span class="threat-tag tag-pass">PASS</span> <span class="xray-note">No sensitive data in the model output. ` +
-                `Echoed tokens (blue) were already masked inbound.</span>`;
+            fill(xrayOut,
+                h("span", { class: "threat-tag tag-pass" }, "PASS"), " ",
+                h("span", { class: "xray-note" }, "No sensitive data in the model output. Echoed tokens (blue) were already masked inbound."));
         }
 
         const allTypes = [...new Set([...inTypes, ...outTypes])];
@@ -917,9 +1060,9 @@ document.addEventListener("DOMContentLoaded", () => {
         metricTokens.textContent = "—";
         tokenLeakIndicator.textContent = "NOTHING RETURNED";
         tokenLeakIndicator.className = "token-leak-indicator leak-warn";
-        modelOutputBox.innerHTML = `<span class="xray-error">${escapeHtml(msg)}</span>`;
-        xraySaw.innerHTML = '<span class="xray-empty">Request stopped before the model.</span>';
-        xrayOut.innerHTML = '<span class="xray-empty">No response.</span>';
+        fill(modelOutputBox, note(msg, "xray-error"));
+        fill(xraySaw, note("Request stopped before the model."));
+        fill(xrayOut, note("No response."));
         auditStatusBadge.textContent = code ? `HTTP ${code}` : "ERROR";
         auditStatusBadge.className = "audit-status-badge badge-blocked";
         const url = logsExplorerUrl(data.request_id);
@@ -927,105 +1070,36 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function initExecution() {
-        sendBtn.addEventListener("click", runSingle);
+        runBtn.addEventListener("click", runSingle);
         compareBtn.addEventListener("click", runCompare);
         $("btnCloseCompare").addEventListener("click", () => { compareCard.style.display = "none"; });
     }
 
     // =========================================================================
-    // 7. Guided demo (Present mode)
+    // 8. Slide-out admin drawer (Cloud Logging audit trail & analytics)
     // =========================================================================
-    const BEATS = [
-        { preset: "clean-api", action: "run", title: "Baseline: a clean prompt",
-          note: "Nothing sensitive, so nothing is masked. Watch the pipeline: SDP adds only tens of milliseconds around the Gemini call." },
-        { preset: "bank-refund", action: "run", title: "Sensitive data never reaches the model",
-          note: "Name, NRIC, card and email are replaced at the gateway. The X-ray shows exactly what Gemini received, and it still completes the refund." },
-        { preset: "bank-refund", action: "compare", title: "With vs without the gateway",
-          note: "The same prompt with SDP OFF (red) and ON (green). Only this privileged demo app may switch SDP off; every other app gets HTTP 403." },
-        { preset: "outbound-reassemble", action: "run", title: "Catching what the model rebuilds",
-          note: "The card number and NRIC arrive as harmless-looking fragments, so inbound SDP has nothing to mask. Gemini stitches them together, and outbound SDP catches them before they reach the client." },
-        { preset: "secrets", action: "run", title: "Beyond PII: developer secrets",
-          note: "Engineers paste configs into AI assistants. The Google API key and password are stripped before the prompt leaves the gateway." },
-        { preset: null, action: "audit", title: "Every decision is audited",
-          note: "Each request writes sanitized, structured entries to Cloud Logging. No raw values are stored anywhere." }
-    ];
-    let beatIndex = -1;
+    const isAdminOpen = () => adminDrawer.classList.contains("open");
 
-    function presetById(id) {
-        return document.querySelector(`.preset-pill[data-id="${id}"]`);
-    }
-
-    function showBeat(i) {
-        beatIndex = Math.max(0, Math.min(BEATS.length - 1, i));
-        const beat = BEATS[beatIndex];
-        $("presentStep").textContent = `${beatIndex + 1} / ${BEATS.length}`;
-        $("presentTitle").textContent = beat.title;
-        $("presentNote").textContent = beat.note;
-        $("presentRun").textContent = beat.action === "compare" ? "⚖️ Compare" : (beat.action === "audit" ? "📊 Open audit" : "▶ Run");
-        $("presentPrev").disabled = beatIndex === 0;
-        $("presentNext").disabled = beatIndex === BEATS.length - 1;
-        closeAdminDrawer();
-        if (beat.preset) {
-            const pill = presetById(beat.preset);
-            if (pill) { selectPreset(pill); pill.scrollIntoView({ behavior: "smooth", block: "nearest" }); }
-        }
-    }
-
-    function runBeat() {
-        const beat = BEATS[beatIndex];
-        if (!beat) return;
-        if (beat.action === "run") runSingle();
-        else if (beat.action === "compare") runCompare();
-        else if (beat.action === "audit") openAdminDrawer();
-    }
-
-    function startPresent() {
-        document.body.classList.add("presenting");
-        $("presentBar").style.display = "flex";
-        showBeat(0);
-    }
-
-    function stopPresent() {
-        document.body.classList.remove("presenting");
-        $("presentBar").style.display = "none";
-        beatIndex = -1;
-    }
-
-    function initPresent() {
-        $("btnPresent").addEventListener("click", () => (beatIndex < 0 ? startPresent() : stopPresent()));
-        $("presentPrev").addEventListener("click", () => showBeat(beatIndex - 1));
-        $("presentNext").addEventListener("click", () => showBeat(beatIndex + 1));
-        $("presentRun").addEventListener("click", runBeat);
-        $("presentExit").addEventListener("click", stopPresent);
-        document.addEventListener("keydown", (e) => {
-            if (beatIndex < 0) return;
-            const typing = ["TEXTAREA", "INPUT", "SELECT"].includes(document.activeElement && document.activeElement.tagName);
-            if (e.key === "Escape") { stopPresent(); return; }
-            if (typing) return;
-            if (e.key === "ArrowRight") { e.preventDefault(); showBeat(beatIndex + 1); }
-            else if (e.key === "ArrowLeft") { e.preventDefault(); showBeat(beatIndex - 1); }
-            else if (e.key === "Enter") { e.preventDefault(); runBeat(); }
-        });
-    }
-
-    // =========================================================================
-    // 8. Slide-Out Admin Drawer (Cloud Logging Audit Trail & Analytics)
-    // =========================================================================
     function openAdminDrawer() {
+        if (!isAdminOpen()) adminOpener = document.activeElement;
         adminDrawer.classList.add("open");
         adminDrawerBackdrop.classList.add("active");
+        adminTab.setAttribute("aria-expanded", "true");
+        if (btnCloseAdminDrawer) btnCloseAdminDrawer.focus();
         loadAuditLogs();
     }
 
     function closeAdminDrawer() {
+        if (!isAdminOpen()) return;
         adminDrawer.classList.remove("open");
         adminDrawerBackdrop.classList.remove("active");
+        adminTab.setAttribute("aria-expanded", "false");
+        if (adminOpener && adminOpener.focus) adminOpener.focus();
+        adminOpener = null;
     }
 
     function initAdminDrawer() {
-        if (btnScrollToAdmin) btnScrollToAdmin.addEventListener("click", openAdminDrawer);
-        if (floatingAdminTrigger) floatingAdminTrigger.addEventListener("click", openAdminDrawer);
-        if (btnOpenAdminFromLeft) btnOpenAdminFromLeft.addEventListener("click", openAdminDrawer);
+        [btnOpenAdmin, adminTab, btnOpenAdminFromLeft].forEach(b => { if (b) b.addEventListener("click", openAdminDrawer); });
         if (btnCloseAdminDrawer) btnCloseAdminDrawer.addEventListener("click", closeAdminDrawer);
         if (adminDrawerBackdrop) adminDrawerBackdrop.addEventListener("click", closeAdminDrawer);
 
@@ -1039,19 +1113,8 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         });
 
-        // Direction dropdown
-        if (adminDirectionSelect) {
-            adminDirectionSelect.addEventListener("change", () => {
-                loadAuditLogs();
-            });
-        }
-
-        // Search input
-        if (adminTableSearch) {
-            adminTableSearch.addEventListener("input", () => {
-                renderAuditView();
-            });
-        }
+        if (adminDirectionSelect) adminDirectionSelect.addEventListener("change", loadAuditLogs);
+        if (adminTableSearch) adminTableSearch.addEventListener("input", renderAuditView);
 
         // Sync Cloud Logging button
         if (btnRefreshAdmin) {
@@ -1095,20 +1158,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function renderAuditView() {
         const query = (adminTableSearch ? adminTableSearch.value : "").trim().toLowerCase();
-        const now = new Date().getTime();
+        const now = Date.now();
         const maxAgeMs = selectedTimeHours * 3600 * 1000;
 
-        // Filter logs by time and search query
         const filtered = currentLogs.filter(item => {
-            const itemTime = new Date(item.timestamp).getTime();
-            if (now - itemTime > maxAgeMs) return false;
-
+            if (now - new Date(item.timestamp).getTime() > maxAgeMs) return false;
             if (!query) return true;
-            const textMatch = (item.deidentifiedText || "").toLowerCase().includes(query) ||
-                              (item.findingTypes || "").toLowerCase().includes(query) ||
-                              (item.direction || "").toLowerCase().includes(query) ||
-                              (item.status || "").toLowerCase().includes(query);
-            return textMatch;
+            return (item.deidentifiedText || "").toLowerCase().includes(query) ||
+                (item.findingTypes || "").toLowerCase().includes(query) ||
+                (item.direction || "").toLowerCase().includes(query) ||
+                (item.status || "").toLowerCase().includes(query);
         });
 
         tableRecordCount.textContent = `${filtered.length} records`;
@@ -1117,145 +1176,95 @@ document.addEventListener("DOMContentLoaded", () => {
         renderInfoTypeChart(filtered);
     }
 
+    const MUTED = "color:var(--text-muted);";
+
     function renderTableRows(logs) {
         if (!adminTableBody) return;
         if (logs.length === 0) {
-            adminTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted);">No audit entries match the current filter.</td></tr>';
+            fill(adminTableBody, h("tr", null,
+                h("td", { colspan: 7, style: `text-align:center;padding:24px;${MUTED}` }, "No audit entries match the current filter.")));
             return;
         }
 
-        let html = "";
-        logs.forEach(log => {
+        fill(adminTableBody, logs.map(log => {
             const d = new Date(log.timestamp);
-            const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            const dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+            const timeStr = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+            const dateStr = d.toLocaleDateString([], { month: "short", day: "numeric" });
             const isOut = log.direction === "outbound";
-            const dirBadge = isOut 
-                ? '<span class="badge outbound-badge">OUTBOUND</span>' 
-                : '<span class="badge inbound-badge">INBOUND</span>';
 
             const detected = log.sensitiveDataDetected;
             const logStatus = String(log.status || "");
             let statusClass = detected ? "badge-blocked" : "badge-clean";
             let statusLabel = detected ? "DE-IDENTIFIED" : "CLEAN";
-            if (logStatus.startsWith("BLOCKED")) {
-                statusClass = "badge-blocked";
-                statusLabel = "BLOCKED";
-            } else if (logStatus === "BYPASSED_BY_POLICY") {
-                statusClass = "";
-                statusLabel = "BYPASSED";
-            }
+            if (logStatus.startsWith("BLOCKED")) { statusClass = "badge-blocked"; statusLabel = "BLOCKED"; }
+            else if (logStatus === "BYPASSED_BY_POLICY") { statusClass = ""; statusLabel = "BYPASSED"; }
 
-            // InfoType chips
-            let infoChips = "";
-            if (detected && log.findingTypes && log.findingTypes !== "NONE") {
-                const types = log.findingTypes.split(",");
-                types.forEach(t => {
-                    infoChips += `<span class="chip-infotype" style="font-size:10px;padding:1px 5px;margin:1px;" title="${escapeHtml(labelFor(t.trim()))}">${escapeHtml(t.trim())}</span> `;
-                });
-            } else {
-                infoChips = '<span style="color:var(--text-muted);font-size:11px;">None</span>';
-            }
+            const types = detected && log.findingTypes && log.findingTypes !== "NONE"
+                ? log.findingTypes.split(",").map(t => t.trim()).filter(Boolean) : [];
+            const infoChips = types.length
+                ? types.map(t => [h("span", { class: "chip-infotype", style: "font-size:10px;padding:1px 5px;margin:1px;", title: labelFor(t) }, t), " "])
+                : h("span", { style: `${MUTED}font-size:11px;` }, "None");
 
-            const preview = escapeHtml((log.deidentifiedText || "").substring(0, 80));
+            const preview = (log.deidentifiedText || "").substring(0, 80);
 
-            html += `
-                <tr>
-                    <td style="font-family:var(--font-mono);font-size:11px;white-space:nowrap;">
-                        <div><strong>${timeStr}</strong></div>
-                        <div style="color:var(--text-muted);font-size:10px;">${dateStr}</div>
-                    </td>
-                    <td>${dirBadge}</td>
-                    <td>${infoChips}</td>
-                    <td style="font-family:var(--font-mono);font-weight:700;">${escapeHtml(log.findingsCount || "0")}</td>
-                    <td><span class="audit-status-badge ${statusClass}">${statusLabel}</span></td>
-                    <td style="font-family:var(--font-mono);font-size:11px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${preview}">
-                        ${preview || '<span style="color:var(--text-muted)">—</span>'}
-                    </td>
-                    <td>
-                        <button class="btn-util btn-inspect-log" data-log-id="${escapeHtml(log.id)}" style="padding:3px 8px;font-size:11px;">Inspect</button>
-                    </td>
-                </tr>
-            `;
-        });
-
-        adminTableBody.innerHTML = html;
-
-        // Wire inspect buttons
-        document.querySelectorAll(".btn-inspect-log").forEach(btn => {
-            btn.addEventListener("click", () => {
-                const logId = btn.getAttribute("data-log-id");
-                const found = currentLogs.find(l => l.id === logId);
-                if (found) showLogModal(found);
-            });
-        });
+            return h("tr", null,
+                h("td", { style: "font-family:var(--font-mono);font-size:11px;white-space:nowrap;" },
+                    h("div", null, h("strong", null, timeStr)),
+                    h("div", { style: `${MUTED}font-size:10px;` }, dateStr)),
+                h("td", null, h("span", { class: `badge ${isOut ? "outbound-badge" : "inbound-badge"}` }, isOut ? "OUTBOUND" : "INBOUND")),
+                h("td", null, infoChips),
+                h("td", { style: "font-family:var(--font-mono);font-weight:700;" }, log.findingsCount || "0"),
+                h("td", null, h("span", { class: `audit-status-badge ${statusClass}`.trim() }, statusLabel)),
+                h("td", { style: "font-family:var(--font-mono);font-size:11px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;", title: preview },
+                    preview || h("span", { style: MUTED }, "—")),
+                h("td", null, h("button", {
+                    type: "button", class: "btn-util btn-inspect-log", style: "padding:3px 8px;font-size:11px;",
+                    onClick: () => showLogModal(log)
+                }, "Inspect")));
+        }));
     }
 
     // =========================================================================
-    // 9. Dynamic Charts Rendering
+    // 9. Charts (DOM-built bars)
     // =========================================================================
+    function stackedBar(name, countText, blockPct, cleanPct, blockColor) {
+        const seg = (cls, pct, label, extra) =>
+            h("div", { class: `stacked-segment ${cls}`, style: `width:${Number(pct)}%;${extra || ""}` }, pct > 15 ? label : "");
+        return h("div", { class: "proxy-bar-item" },
+            h("div", { class: "proxy-bar-header" },
+                h("span", { class: "proxy-bar-name" }, name),
+                h("span", { class: "proxy-bar-count" }, countText)),
+            h("div", { class: "stacked-bar-track" },
+                seg("segment-blocked", blockPct, `${Math.round(blockPct)}% PII`, blockColor ? `background:${blockColor};` : ""),
+                seg("segment-clean", cleanPct, `${Math.round(cleanPct)}% Clean`)));
+    }
+
     function renderTrafficChart(logs) {
         if (!trafficChartContainer) return;
-
         const inboundTotal = logs.filter(l => l.direction === "inbound").length;
         const inboundBlocked = logs.filter(l => l.direction === "inbound" && l.sensitiveDataDetected).length;
-
         const outboundTotal = logs.filter(l => l.direction === "outbound").length;
         const outboundBlocked = logs.filter(l => l.direction === "outbound" && l.sensitiveDataDetected).length;
 
         const inBlockPct = inboundTotal > 0 ? (inboundBlocked / inboundTotal) * 100 : 0;
-        const inCleanPct = inboundTotal > 0 ? (100 - inBlockPct) : 100;
-
         const outBlockPct = outboundTotal > 0 ? (outboundBlocked / outboundTotal) * 100 : 0;
-        const outCleanPct = outboundTotal > 0 ? (100 - outBlockPct) : 100;
+        const legend = (color, label) => h("div", { class: "legend-item" },
+            h("div", { class: "legend-dot", style: `background:${color}` }), h("span", null, label));
 
-        trafficChartContainer.innerHTML = `
-            <div class="chart-svg-wrap">
-                <div class="chart-bars-list">
-                    <div class="proxy-bar-item">
-                        <div class="proxy-bar-header">
-                            <span class="proxy-bar-name">Inbound PreFlow Ingress</span>
-                            <span class="proxy-bar-count">${inboundTotal} requests (${inboundBlocked} with PII)</span>
-                        </div>
-                        <div class="stacked-bar-track">
-                            <div class="stacked-segment segment-blocked" style="width:${inBlockPct}%">${inBlockPct > 15 ? Math.round(inBlockPct) + "% PII" : ""}</div>
-                            <div class="stacked-segment segment-clean" style="width:${inCleanPct}%">${inCleanPct > 15 ? Math.round(inCleanPct) + "% Clean" : ""}</div>
-                        </div>
-                    </div>
-
-                    <div class="proxy-bar-item">
-                        <div class="proxy-bar-header">
-                            <span class="proxy-bar-name">Outbound PostFlow Egress</span>
-                            <span class="proxy-bar-count">${outboundTotal} responses (${outboundBlocked} protected)</span>
-                        </div>
-                        <div class="stacked-bar-track">
-                            <div class="stacked-segment segment-blocked" style="width:${outBlockPct}%;background:var(--warning);">${outBlockPct > 15 ? Math.round(outBlockPct) + "% PII" : ""}</div>
-                            <div class="stacked-segment segment-clean" style="width:${outCleanPct}%">${outCleanPct > 15 ? Math.round(outCleanPct) + "% Clean" : ""}</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bar-legend">
-                    <div class="legend-item">
-                        <div class="legend-dot" style="background:var(--danger)"></div>
-                        <span>Inbound Sensitive PII</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-dot" style="background:var(--warning)"></div>
-                        <span>Outbound Protected PII</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-dot" style="background:var(--success)"></div>
-                        <span>Clean / Approved</span>
-                    </div>
-                </div>
-            </div>
-        `;
+        fill(trafficChartContainer, h("div", { class: "chart-svg-wrap" },
+            h("div", { class: "chart-bars-list" },
+                stackedBar("Inbound PreFlow Ingress", `${inboundTotal} requests (${inboundBlocked} with PII)`,
+                    inBlockPct, inboundTotal > 0 ? 100 - inBlockPct : 100),
+                stackedBar("Outbound PostFlow Egress", `${outboundTotal} responses (${outboundBlocked} protected)`,
+                    outBlockPct, outboundTotal > 0 ? 100 - outBlockPct : 100, "var(--warning)")),
+            h("div", { class: "bar-legend" },
+                legend("var(--danger)", "Inbound Sensitive PII"),
+                legend("var(--warning)", "Outbound Protected PII"),
+                legend("var(--success)", "Clean / Approved"))));
     }
 
     function renderInfoTypeChart(logs) {
         if (!infoTypeChartContainer) return;
-
         const counts = {};
         logs.forEach(l => {
             if (l.sensitiveDataDetected && l.findingTypes && l.findingTypes !== "NONE") {
@@ -1268,105 +1277,103 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
         if (sorted.length === 0) {
-            infoTypeChartContainer.innerHTML = '<div style="color:var(--text-muted);font-style:italic;font-size:12px;">Zero sensitive infoType findings recorded in this timeframe.</div>';
+            fill(infoTypeChartContainer, h("div", { style: `${MUTED}font-style:italic;font-size:12px;` },
+                "Zero sensitive infoType findings recorded in this timeframe."));
             return;
         }
 
         const maxVal = sorted[0][1] || 1;
-        let html = '<div style="width:100%;display:flex;flex-direction:column;gap:10px;">';
-        sorted.forEach(([type, count]) => {
-            const pct = Math.round((count / maxVal) * 100);
-            html += `
-                <div style="display:flex;flex-direction:column;gap:3px;">
-                    <div style="display:flex;justify-content:space-between;font-size:11.5px;">
-                        <span style="font-family:var(--font-mono);font-weight:600;color:var(--text-secondary);" title="${escapeHtml(labelFor(type))}">${escapeHtml(type)}</span>
-                        <span style="font-family:var(--font-mono);font-weight:700;color:var(--text-main);">${count} findings</span>
-                    </div>
-                    <div style="height:8px;background:var(--bg-tertiary);border-radius:4px;overflow:hidden;">
-                        <div style="width:${pct}%;height:100%;background:linear-gradient(90deg, #ea4335, #fbbc04);border-radius:4px;"></div>
-                    </div>
-                </div>
-            `;
-        });
-        html += '</div>';
-        infoTypeChartContainer.innerHTML = html;
+        fill(infoTypeChartContainer, h("div", { style: "width:100%;display:flex;flex-direction:column;gap:10px;" },
+            sorted.map(([type, count]) => h("div", { style: "display:flex;flex-direction:column;gap:3px;" },
+                h("div", { style: "display:flex;justify-content:space-between;font-size:11.5px;" },
+                    h("span", { style: "font-family:var(--font-mono);font-weight:600;color:var(--text-secondary);", title: labelFor(type) }, type),
+                    h("span", { style: "font-family:var(--font-mono);font-weight:700;color:var(--text-main);" }, `${count} findings`)),
+                h("div", { style: "height:8px;background:var(--bg-tertiary);border-radius:4px;overflow:hidden;" },
+                    h("div", { style: `width:${Math.round((count / maxVal) * 100)}%;height:100%;background:linear-gradient(90deg, var(--google-red), var(--google-yellow));border-radius:4px;` }))))));
     }
 
     // =========================================================================
-    // 10. Modals (Architecture Diagram & Log Inspector)
+    // 10. Modals (architecture diagram & log inspector)
     // =========================================================================
-    function initModals() {
-        // Architecture Modal
-        if (btnViewArch) {
-            btnViewArch.addEventListener("click", () => {
-                archModal.style.display = "flex";
-            });
-        }
-        if (btnCloseArchModal) {
-            btnCloseArchModal.addEventListener("click", () => {
-                archModal.style.display = "none";
-            });
-        }
-        if (archModal) {
-            archModal.addEventListener("click", (e) => {
-                if (e.target === archModal) archModal.style.display = "none";
-            });
-        }
+    const isArchOpen = () => archModal.style.display === "flex";
+    const isLogOpen = () => logDetailModal.style.display === "flex";
 
-        // Log Detail Modal
-        if (modalCloseBtn) modalCloseBtn.addEventListener("click", () => logDetailModal.style.display = "none");
-        if (btnCloseModalBottom) btnCloseModalBottom.addEventListener("click", () => logDetailModal.style.display = "none");
-        if (logDetailModal) {
-            logDetailModal.addEventListener("click", (e) => {
-                if (e.target === logDetailModal) logDetailModal.style.display = "none";
-            });
-        }
+    function openArch() {
+        if (!isArchOpen()) archOpener = document.activeElement;
+        archModal.style.display = "flex";
+        emit("demo:archopen");
+        archModalCloseBtn.focus();
+    }
+
+    function closeArch() {
+        if (!isArchOpen()) return;
+        archModal.style.display = "none";
+        if (archOpener && archOpener.focus) archOpener.focus();
+        archOpener = null;
+    }
+
+    function closeLogModal() {
+        if (!isLogOpen()) return;
+        logDetailModal.style.display = "none";
+        if (logOpener && logOpener.focus) logOpener.focus();
+        logOpener = null;
+    }
+
+    function initArchImage() {
+        const img = $("archImg");
+        const link = $("archImgLink");
+        if (!img) return;
+        const fallback = () => {
+            const fb = img.dataset.fallback;
+            if (!fb || img.getAttribute("src") === fb) return;
+            console.warn(`Architecture diagram not found at ${img.getAttribute("src")}; showing placeholder.`);
+            img.setAttribute("src", fb);
+            if (link) link.setAttribute("href", fb);
+        };
+        img.addEventListener("error", fallback);
+        if (img.complete && img.naturalWidth === 0) fallback();
+    }
+
+    function initModals() {
+        initArchImage();
+        viewArchBtn.addEventListener("click", openArch);
+        archModalCloseBtn.addEventListener("click", closeArch);
+        archModal.addEventListener("click", (e) => { if (e.target === archModal) closeArch(); });
+
+        modalCloseBtn.addEventListener("click", closeLogModal);
+        btnCloseModalBottom.addEventListener("click", closeLogModal);
+        logDetailModal.addEventListener("click", (e) => { if (e.target === logDetailModal) closeLogModal(); });
 
         if (btnCopyModalJson) {
             btnCopyModalJson.addEventListener("click", () => {
                 navigator.clipboard.writeText(modalLogJson.textContent).then(() => {
                     const orig = btnCopyModalJson.textContent;
                     btnCopyModalJson.textContent = "Copied!";
-                    setTimeout(() => btnCopyModalJson.textContent = orig, 1500);
+                    setTimeout(() => { btnCopyModalJson.textContent = orig; }, 1500);
                 });
             });
         }
 
+        // Esc closes the top-most layer only (log detail > architecture > drawer).
         document.addEventListener("keydown", (e) => {
             if (e.key !== "Escape") return;
-            if (archModal.style.display === "flex") archModal.style.display = "none";
-            if (logDetailModal.style.display === "flex") logDetailModal.style.display = "none";
-            if (adminDrawer.classList.contains("open")) closeAdminDrawer();
+            if (isLogOpen()) { e.preventDefault(); closeLogModal(); }
+            else if (isArchOpen()) { e.preventDefault(); closeArch(); }
+            else if (isAdminOpen()) { e.preventDefault(); closeAdminDrawer(); }
         });
     }
 
     function showLogModal(log) {
-        modalMetaGrid.innerHTML = `
-            <div class="modal-meta-item">
-                <span class="modal-meta-k">Log ID:</span>
-                <span class="modal-meta-v">${escapeHtml(log.id)}</span>
-            </div>
-            <div class="modal-meta-item">
-                <span class="modal-meta-k">Direction:</span>
-                <span class="modal-meta-v">${escapeHtml((log.direction || "").toUpperCase())}</span>
-            </div>
-            <div class="modal-meta-item">
-                <span class="modal-meta-k">Timestamp:</span>
-                <span class="modal-meta-v">${escapeHtml(log.timestamp)}</span>
-            </div>
-            <div class="modal-meta-item">
-                <span class="modal-meta-k">Findings Count:</span>
-                <span class="modal-meta-v">${escapeHtml(log.findingsCount)}</span>
-            </div>
-            <div class="modal-meta-item">
-                <span class="modal-meta-k">InfoTypes:</span>
-                <span class="modal-meta-v">${escapeHtml(log.findingTypes)}</span>
-            </div>
-            <div class="modal-meta-item">
-                <span class="modal-meta-k">Destination Log:</span>
-                <span class="modal-meta-v">${escapeHtml(log.logName || config.logName)}</span>
-            </div>
-        `;
+        logOpener = document.activeElement;
+        const meta = (k, v) => h("div", { class: "modal-meta-item" },
+            h("span", { class: "modal-meta-k" }, k), h("span", { class: "modal-meta-v" }, v ?? ""));
+        fill(modalMetaGrid,
+            meta("Log ID:", log.id),
+            meta("Direction:", (log.direction || "").toUpperCase()),
+            meta("Timestamp:", log.timestamp),
+            meta("Findings Count:", log.findingsCount),
+            meta("InfoTypes:", log.findingTypes),
+            meta("Destination Log:", log.logName || config.logName));
         modalLogJson.textContent = JSON.stringify(log, null, 2);
         const url = logsExplorerUrl(log.requestId);
         if (modalLogsLink) {
@@ -1374,18 +1381,38 @@ document.addEventListener("DOMContentLoaded", () => {
             if (url) modalLogsLink.href = url;
         }
         logDetailModal.style.display = "flex";
+        modalCloseBtn.focus();
     }
 
     // =========================================================================
-    // Initialization Bootstrap
+    // 11. Facade for the Guided Tour (and anything else) + bootstrap
     // =========================================================================
+    function scenarioList() {
+        return [...document.querySelectorAll(".preset-pill[data-scenario]")].map(p => ({
+            id: p.dataset.scenario,
+            label: p.dataset.title || p.textContent.trim(),
+            description: p.dataset.desc || "",
+            prompt: p.dataset.prompt || "",
+            expect: p.dataset.expect ? "masked" : "allowed"
+        }));
+    }
+
+    function loadScenario(id) {
+        const pill = presetById(id);
+        if (!pill) return false;
+        closeAdminDrawer();
+        selectPreset(pill);
+        pill.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        return true;
+    }
+
     // Notice dismiss logic
     const disclaimerCloseBtn = $("disclaimerCloseBtn");
     const disclaimerPanel = $("disclaimerPanel");
     if (disclaimerCloseBtn && disclaimerPanel) {
         disclaimerCloseBtn.addEventListener("click", () => {
             disclaimerPanel.style.opacity = "0";
-            setTimeout(() => disclaimerPanel.style.display = "none", 200);
+            setTimeout(() => { disclaimerPanel.style.display = "none"; }, 200);
         });
     }
 
@@ -1393,11 +1420,27 @@ document.addEventListener("DOMContentLoaded", () => {
     initSplitter();
     initPromptControls();
     initExecution();
-    initPresent();
     initAdminDrawer();
     initModals();
-    loadConfig();
 
-    // Initial fetch of background logs for KPIs
-    loadAuditLogs();
+    window.demoApp = {
+        slug: DEMO_SLUG,
+        loadScenario,
+        run: runSingle,
+        compare: runCompare,
+        isRunning: () => busy,
+        scenarios: scenarioList,
+        selectedScenario: () => (activePreset ? activePreset.dataset.scenario : null),
+        lastResult: () => lastResult,
+        isMock: () => false,
+        openAdmin: openAdminDrawer, closeAdmin: closeAdminDrawer, isAdminOpen,
+        openArch, closeArch, isArchOpen,
+        isOverlayOpen: () => isArchOpen() || isAdminOpen() || isLogOpen(),
+        setPolicies,
+        toast, setTheme
+    };
+    emit("demo:ready", { slug: DEMO_SLUG });
+
+    loadConfig();
+    loadAuditLogs(); // initial fetch of background logs for KPIs
 });

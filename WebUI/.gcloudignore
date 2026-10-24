@@ -1,0 +1,11 @@
+# Files `gcloud run deploy --source=WebUI` must NOT upload to Cloud Build.
+# Only Dockerfile, app.py and static/ are needed (see Dockerfile COPY lines).
+.gcloudignore
+.env
+.env.*
+audit_logs.json
+__pycache__/
+*.pyc
+.DS_Store
+run-ui.sh
+deploy-cloudrun.sh

@@ -1,18 +1,14 @@
 /* ==========================================================================
-   Demo v2 (Phases A–C): pipeline, X-ray, compare, present mode, toasts.
+   Demo v2 (Phases A–C): pipeline, X-ray, compare, toasts. (Guided Tour styles: tour/tour.css)
    Uses only theme variables from style.css so light/dark both work.
    ========================================================================== */
 
-/* ---------- Header / policy / presets ---------- */
-.present-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 12px; border-radius: var(--radius-full);
-  border: 1px solid var(--apigee-border); background: var(--apigee-subtle);
-  color: var(--apigee-orange); font: 600 12px var(--font-sans); cursor: pointer;
-  transition: background .15s, transform .15s;
-}
-.present-btn:hover { background: var(--apigee-orange); color: #fff; transform: translateY(-1px); }
-
+/* ---------- Policy / presets ---------- */
+.preset-group-inline { flex-direction: row; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+/* SDP policy bar: title · two toggles · badge on one ~44px row */
+.policy-bar { flex-direction: row; align-items: center; gap: 10px; padding: 8px 12px; flex-wrap: wrap; }
+.policy-bar .guardrails-list { display: flex; gap: 8px; flex: 1 1 auto; }
+.policy-bar .guardrail-item { flex: 1 1 0; height: 28px; padding: 3px 8px; gap: 8px; }
 .policy-hint {
   margin-top: 8px; font-size: 11px; line-height: 1.45; color: var(--text-muted);
 }
@@ -243,33 +239,6 @@ mark.pii-raw.pii-leaked {
   background: var(--warning-bg); color: var(--warning); border-color: var(--warning-border);
 }
 
-/* ---------- Present mode ---------- */
-.present-bar {
-  position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 1200;
-  width: min(880px, calc(100vw - 32px)); display: flex; align-items: center; gap: 14px;
-  padding: 12px 14px; border-radius: var(--radius-lg);
-  background: var(--bg-card); border: 1px solid var(--apigee-border); box-shadow: var(--shadow-lg);
-  animation: sdp-rise .25s ease;
-}
-@keyframes sdp-rise { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } }
-.present-step {
-  flex: 0 0 auto; font: 700 12px var(--font-mono); color: #fff; background: var(--apigee-orange);
-  padding: 4px 10px; border-radius: var(--radius-full);
-}
-.present-text { flex: 1; min-width: 0; }
-.present-text strong { display: block; font-size: 14px; color: var(--text-main); }
-.present-text p { font-size: 12.5px; line-height: 1.45; color: var(--text-secondary); margin-top: 2px; }
-.present-actions { display: flex; gap: 6px; flex: 0 0 auto; }
-.present-nav, .present-run {
-  border-radius: var(--radius-sm); cursor: pointer; font: 600 13px var(--font-sans);
-  padding: 7px 11px; border: 1px solid var(--border-accent); background: var(--bg-subtle); color: var(--text-main);
-}
-.present-nav:hover { background: var(--bg-tertiary); }
-.present-run { background: var(--apigee-orange); border-color: var(--apigee-orange); color: #fff; }
-.present-run:hover { background: var(--apigee-orange-hover); }
-body.presenting { padding-bottom: 96px; }
-body.presenting .floating-admin-trigger { display: none; }
-
 /* ---------- Toasts ---------- */
 .toast-container {
   position: fixed; top: 16px; right: 16px; z-index: 1300;
@@ -291,6 +260,44 @@ body.presenting .floating-admin-trigger { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
   mark.pii-raw, .pipe-node.is-active .pipe-icon, .pipe-node.is-active + .pipe-link::after,
-  .input-shake, .present-bar, .toast { animation: none !important; }
+  .input-shake, .toast { animation: none !important; }
   mark.pii-raw:not(.pii-leaked) { background: var(--danger-bg); color: var(--danger); text-decoration: line-through; }
 }
+
+/* ---------- Compact result card (one-line metrics, tighter sections) ---------- */
+#resultCard { gap: 8px; padding: 12px 14px; }
+#resultCard .proxy-identity h3 { font-size: 14px; }
+#resultCard .endpoint-path { font-size: 10.5px; }
+
+/* Metrics: label and value on one line, all four in a single row */
+#resultCard .metrics-bar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 22px; padding: 4px 10px; }
+#resultCard .metric-item { flex-direction: row; align-items: baseline; gap: 6px; }
+#resultCard .metric-label { font-size: 9px; }
+#resultCard .metric-val { font-size: 11.5px; }
+
+/* Pipeline */
+#resultCard .pipeline-wrap { padding: 8px 10px; margin-bottom: 0; }
+#resultCard .pipe-node { min-width: 76px; padding: 4px 6px; gap: 1px; }
+#resultCard .pipe-icon { font-size: 14px; }
+#resultCard .pipe-name { font-size: 11px; }
+#resultCard .pipe-sub { font-size: 9.5px; }
+#resultCard .pipe-ms { font-size: 10px; min-height: 12px; }
+#resultCard .latency-bar { margin-top: 6px; }
+#resultCard .lat-track { height: 6px; }
+#resultCard .lat-caption { margin-top: 4px; font-size: 10.5px; }
+
+/* Banner */
+#resultCard .security-banner { padding: 6px 10px; gap: 8px; }
+#resultCard .security-icon { font-size: 15px; }
+#resultCard .security-text strong { font-size: 11.5px; }
+#resultCard .security-text p { font-size: 10.5px; line-height: 1.35; }
+
+/* Response */
+#resultCard .output-header { padding: 4px 10px; }
+#resultCard .output-body { min-height: 110px; max-height: 340px; padding: 8px 12px; font-size: 11.5px; line-height: 1.5; }
+
+/* X-ray */
+#resultCard .audit-card { padding: 8px 10px; gap: 6px; }
+#resultCard .xray-grid { gap: 8px; margin-top: 4px; }
+#resultCard .xray-head { padding: 5px 8px; font-size: 11.5px; }
+#resultCard .xray-body { padding: 7px 8px; font-size: 11px; line-height: 1.5; max-height: 300px; }

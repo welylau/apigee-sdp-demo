@@ -1,0 +1,11 @@
+flowchart LR
+    C([Client]) --> VA[VA-Verify-API-Key] --> SA[SA-Spike-Arrest] --> LTQ[LTQ-Enforce-Tokens]
+    LTQ --> PI[JS-SDP-Prepare-Inbound]
+    PI -- "bypass requested, app not allowed" --> F403[/403 PERMISSION_DENIED/]
+    PI --> SCI[SC-SDP-Deidentify-Inbound<br/>DLP content:deidentify]
+    SCI --> AI[JS-SDP-Apply-Inbound]
+    AI -- "DLP failed" --> F502[/502 SDP_UNAVAILABLE/]
+    AI --> MLI[ML-Log-SDP-Inbound] --> G[Vertex AI global<br/>gemini-3.5-flash-lite]
+    G --> CT[LTQ-Count-Tokens] --> SCO[SC-SDP-Deidentify-Outbound] --> AO[JS-SDP-Apply-Outbound]
+    AO -- "DLP failed" --> F502
+    AO --> MLO[ML-Log-SDP-Outbound] --> FIN[JS-SDP-Finalize-Response<br/>X-SDP-* headers, optional sdpAudit] --> C2([Client])

@@ -1,0 +1,18 @@
+sequenceDiagram
+    autonumber
+    participant U as User (Web UI)
+    participant A as Apigee X (gemini-sdp-proxy)
+    participant D as Sensitive Data Protection (asia-southeast1)
+    participant V as Vertex AI Gemini (global)
+    participant L as Cloud Logging
+    U->>A: POST prompt with NRIC, card, email (x-api-key)
+    A->>A: VerifyAPIKey, SpikeArrest, LLMTokenQuota
+    A->>D: content:deidentify (all parts, one call)
+    D-->>A: [SINGAPORE_NATIONAL_REGISTRATION_ID_NUMBER], [CREDIT_CARD_NUMBER] …
+    A->>L: inbound audit entry (sanitized)
+    A->>V: generateContent with masked prompt
+    V-->>A: answer (may contain generated PII)
+    A->>D: content:deidentify (all candidates, one call)
+    D-->>A: sanitized answer
+    A->>L: outbound audit entry (tokens, latency, findings)
+    A-->>U: sanitized answer + X-SDP-* headers

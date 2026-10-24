@@ -11,3 +11,28 @@ sanitize.sh
 restore.sh
 .sanitize.map
 .sanitize.state
+
+# --- from apigee-demo-publish gitignore.template ---
+# --- local-only publish helpers (hold real values; never commit) ---
+.sanitize.state.tmp.*
+.sanitize.allow
+# --- secrets / env ---
+.env.*
+!.env.example
+*.pem
+*-key.json
+# --- runtime data & local work ---
+audit_logs.json
+*.db
+*.sqlite
+scratch/
+.venv/
+venv/
+node_modules/
+*.py[cod]
+.terraform/
+terraform.tfstate*
+.vscode/
+.idea/
+*.zip
+*.tar.gz
